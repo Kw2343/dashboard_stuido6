@@ -4,6 +4,7 @@ import streamlit as st
 from pathlib import Path
 
 
+
 def show_bought_together_chart(products_lookup):
     st.header("Top Products Bought Together")
 
@@ -87,6 +88,7 @@ def show_bought_together_chart(products_lookup):
         yaxis_title="",
         xaxis_title="Count"
     )
+   
 
     st.plotly_chart(fig, use_container_width=True)
 

@@ -41,3 +41,19 @@ Thumbs.db
 # Environment variables
 
 .env
+
+# Virtual environment
+venv/
+.venv/
+
+# Firebase secrets
+serviceAccountKey.json
+firebase_config.py
+
+# Python
+__pycache__/
+*.pyc
+
+# Data
+*.csv
+*.xlsx

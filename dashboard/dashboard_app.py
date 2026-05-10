@@ -1,7 +1,12 @@
 from __future__ import annotations
 from pathlib import Path
 from typing import Optional, Union
-from scatter_plot import load_scatter_data, create_scatter_plot
+from popularity import show_popularity_tab
+from products import show_products_tab
+from users import show_users_tab
+from popularity import show_popularity_tab
+from overview import show_overview_tab
+from scatter import show_scatter_tab
 
 import numpy as np
 import pandas as pd
@@ -12,6 +17,59 @@ import pandas as pd
 from sklearn.metrics.pairwise import cosine_similarity
 from bought_tgt import show_bought_together_chart
 
+if "dark_mode" not in st.session_state:
+    st.session_state.dark_mode = False
+
+col1, col2, col3 = st.columns([8, 1, 1])
+
+with col3:
+    if st.button("🌙" if not st.session_state.dark_mode else "☀️"):
+        st.session_state.dark_mode = not st.session_state.dark_mode
+        
+def apply_theme_class():
+    theme_class = "dark" if st.session_state.dark_mode else "light"
+
+    st.markdown(
+        f"""
+        <style>
+        .stApp {{
+            transition: all 0.3s ease;
+        }}
+        </style>
+
+        <script>
+        const app = window.parent.document.querySelector('.stApp');
+        if (app) {{
+            app.classList.remove('light', 'dark');
+            app.classList.add('{theme_class}');
+        }}
+        </script>
+        """,
+        unsafe_allow_html=True
+    )
+
+apply_theme_class()
+    
+def load_css(file_name):
+    with open(file_name) as f:
+        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+
+load_css("dashboard/styles.css")
+
+def reset_if_filelike(obj):
+    try:
+        obj.seek(0)  # reset pointer for uploaded files
+    except Exception:
+        pass
+    return obj
+
+st.markdown("""
+<style>
+.block-container {
+    padding-top: 1rem;
+}
+</style>
+""", unsafe_allow_html=True)
 
 st.set_page_config(
     page_title="Health & Household Reviews Dashboard",
@@ -24,11 +82,6 @@ DEFAULT_REVIEWS = "data/reviews_clean_no_exact_duplicates.csv"
 DEFAULT_USERS = "data/user_summary.csv"
 DEFAULT_ASIN_ITEM = "data/asin_item.csv"
 
-
-def reset_if_filelike(source):
-    if hasattr(source, "seek"):
-        source.seek(0)
-    return source
 
 # ---------- Loading ----------
 @st.cache_data(show_spinner=False)
@@ -111,6 +164,61 @@ def schema_preview(source: Union[str, Path, bytes], nrows: int = 5) -> pd.DataFr
 
 
 # ---------- Helpers ----------
+# ---------- Plot Styling ----------
+def style_bar_chart(fig):
+    is_dark = st.session_state.get("dark_mode", False)
+
+    bg = "#0f172a" if is_dark else "white"
+    grid = "#334155" if is_dark else "#e5e7eb"
+    border = "#334155" if is_dark else "#cfcfcf"
+    font = "#ffffff" if is_dark else "#111827"
+
+    fig.update_layout(
+        plot_bgcolor=bg,
+        paper_bgcolor=bg,
+        font=dict(color=font),
+
+        shapes=[
+            dict(
+                type="rect",
+                xref="paper",
+                yref="paper",
+                x0=0,
+                y0=0,
+                x1=1,
+                y1=1,
+                line=dict(color=border, width=1.5),
+                fillcolor="rgba(0,0,0,0)"
+            )
+        ],
+
+        margin=dict(l=20, r=20, t=60, b=20),
+
+        xaxis=dict(
+            showgrid=True,
+            gridcolor=grid,
+            zeroline=False,
+            showline=True,
+            linecolor=border,
+        ),
+
+        yaxis=dict(
+            showgrid=True,
+            gridcolor=grid,
+            zeroline=False,
+            showline=True,
+            linecolor=border,
+        ),
+
+        legend=dict(
+            bgcolor="rgba(255,255,255,0.05)" if is_dark else "rgba(255,255,255,0.8)",
+            bordercolor=border,
+            borderwidth=1
+        )
+    )
+
+    return fig
+
 def resolve_default_file(filename: str) -> Optional[Path]:
     candidates = [Path.cwd() / filename, Path(__file__).resolve().parent / filename]
     for path in candidates:
@@ -165,6 +273,7 @@ def section_header(title: str, subtitle: str = "") -> None:
         st.caption(subtitle)
 
 
+
 # ---------- UI ----------
 st.title("📊 Interactive dashboard for E-Shop recommendation system - Studio 5")
 st.write(
@@ -198,6 +307,24 @@ with st.spinner("Loading CSV files..."):
     reviews = load_reviews(reviews_source)
     products = load_products(products_source)
     users = load_users(users_source)
+
+    # ✅ Create purchase frequency
+    purchase_freq = (
+        reviews[reviews["verified_purchase"] == True]
+        .drop_duplicates(subset=["user_id", "parent_asin", "review_year_month"])
+        .groupby("parent_asin")
+        .size()
+        .reset_index(name="purchase_frequency")
+    )
+
+    # ✅ Merge purchase frequency into products
+    products = products.merge(
+        purchase_freq,
+        on="parent_asin",
+        how="left"
+    )
+
+    products["purchase_frequency"] = products["purchase_frequency"].fillna(0)
 
     # Load asin_item optionally
     asin_item = None
@@ -373,250 +500,43 @@ def prepare_scatter_data(df, target_user=None):
 
 
 # ---------- Tabs ----------
-overview_tab, products_tab, users_tab, scatter_tab, bought_together_tab = st.tabs(
-    ["Overview", "Products", "Users", "Scatter Plot", "Bought Together"]
+overview_tab, products_tab, users_tab, scatter_tab, bought_together_tab, popularity_tab = st.tabs(
+    ["Overview", "Products", "Users", "Scatter Plot", "Bought Together", "Popularity"]
 )
 
 with bought_together_tab:
     show_bought_together_chart(products_lookup)
 
 with overview_tab:
-    section_header("Dataset snapshot")
-    o1, o2, o3, o4 = st.columns(4)
-    o1.metric("All reviews", human_int(len(reviews)))
-    o2.metric("All products", human_int(products["parent_asin"].nunique()))
-    o3.metric("All users", human_int(users["user_id"].nunique()))
-    o4.metric("Avg words per filtered review", f"{filtered_reviews['review_length_words'].mean():.1f}")
-
-    left, right = st.columns(2)
-
-    with left:
-        yearly = (
-            filtered_reviews.groupby("review_year", as_index=False)
-            .size()
-            .rename(columns={"size": "reviews"})
-        )
-        fig = px.bar(yearly, x="review_year", y="reviews", title="Reviews per year")
-        fig.update_layout(height=420)
-        st.plotly_chart(fig, use_container_width=True)
-
-    with right:
-        rating_dist = make_histogram_df(filtered_reviews["rating"])
-        fig = px.bar(rating_dist, x="value", y="count", title="Rating distribution")
-        fig.update_layout(height=420, xaxis_title="Rating", yaxis_title="Reviews")
-        st.plotly_chart(fig, use_container_width=True)
-
-    left2, right2 = st.columns(2)
-
-    with left2:
-        reviews_per_user = filtered_reviews.groupby("user_id").size()
-        user_bins = pd.cut(
-            reviews_per_user,
-            bins=[0, 1, 5, 10, 20, 50, np.inf],
-            labels=["1", "2-5", "6-10", "11-20", "21-50", "51+"],
-            include_lowest=True,
-        )
-        user_bin_counts = user_bins.value_counts().sort_index().reset_index()
-        user_bin_counts.columns = ["reviews_range", "user_count"]
-        user_bin_counts["percentage"] = (user_bin_counts["user_count"] / user_bin_counts["user_count"].sum() * 100).round(1)
-        user_bin_counts["text"] = user_bin_counts["percentage"].astype(str) + "%"
-        fig = px.bar(user_bin_counts, x="reviews_range", y="user_count", title="Reviews written per user", text="text")
-        fig.update_traces(textposition="outside")
-        fig.update_layout(height=420, xaxis_title="Reviews per user", yaxis_title="Number of users")
-        st.plotly_chart(fig, use_container_width=True)
-
-    with right2:
-        reviews_per_product = filtered_reviews.groupby("parent_asin").size()
-        product_bins = pd.cut(
-            reviews_per_product,
-            bins=[0, 1, 5, 10, 20, 50, np.inf],
-            labels=["1", "2-5", "6-10", "11-20", "21-50", "51+"],
-            include_lowest=True,
-        )
-        product_bin_counts = product_bins.value_counts().sort_index().reset_index()
-        product_bin_counts.columns = ["reviews_range", "product_count"]
-        product_bin_counts["percentage"] = (product_bin_counts["product_count"] / product_bin_counts["product_count"].sum() * 100).round(1)
-        product_bin_counts["text"] = product_bin_counts["percentage"].astype(str) + "%"
-        fig = px.bar(product_bin_counts, x="reviews_range", y="product_count", title="Reviews received per product", text="text")
-        fig.update_traces(textposition="outside")
-        fig.update_layout(height=420, xaxis_title="Reviews per product", yaxis_title="Number of products")
-        st.plotly_chart(fig, use_container_width=True)
+    show_overview_tab(
+        reviews,
+        products,
+        users,
+        filtered_reviews,
+        human_int,
+        style_bar_chart,
+        section_header,
+    )
 
 with products_tab:
-    section_header("Product exploration")
-
-    product_counts = (
-        filtered_reviews.groupby("parent_asin", as_index=False)
-        .size()
-        .rename(columns={"size": "filtered_review_count"})
-        .merge(products_lookup, on="parent_asin", how="left")
-        .sort_values(["filtered_review_count", "average_rating"], ascending=[False, False])
+    show_products_tab(
+        filtered_reviews,
+        products_lookup,
+        products,
+        style_bar_chart
     )
-
-    top_n = st.slider("Top products to show", 10, 100, 25, key="top_products_n")
-    chart_data = product_counts.head(top_n).sort_values("filtered_review_count").copy()
-    # Use display_title for cleaner chart labels
-    chart_data["chart_title"] = chart_data.get("display_title", chart_data["title"])
-
-    fig = px.bar(
-        chart_data,
-        x="filtered_review_count",
-        y="chart_title",
-        orientation="h",
-        hover_data=["parent_asin", "store_clean", "average_rating", "price", "title"],
-        title=f"Top {top_n} products by filtered review count",
-    )
-    fig.update_layout(height=420, yaxis_title="Product")
-    fig.update_yaxes(tickfont=dict(size=10))
-    st.plotly_chart(fig, use_container_width=True)
-
-    with st.container():
-        completeness = pd.DataFrame(
-            {
-                "Field": ["Price", "Description", "Features", "Store", "Categories"],
-                "Coverage": [
-                    products["has_price"].mean(),
-                    products["has_description"].mean(),
-                    products["has_features"].mean(),
-                    products["has_store"].mean(),
-                    products["has_categories"].mean(),
-                ],
-            }
-        )
-        fig = px.bar(completeness, x="Field", y="Coverage", title="Metadata coverage in products file")
-        fig.update_layout(height=500, yaxis_tickformat=".0%")
-        st.plotly_chart(fig, use_container_width=True)
-
-    st.markdown("#### Search products")
-    query = st.text_input("Search by product title or store")
-    filtered_product_table = product_counts.copy()
-
-    # Filter out products with missing store or missing item
-    filtered_product_table = filtered_product_table[
-        (filtered_product_table["store_clean"].notna() & (filtered_product_table["store_clean"] != "(missing store)"))
-        & (filtered_product_table["display_title"].notna() & (filtered_product_table["display_title"] != ""))
-    ]
-
-    if query.strip():
-        q = query.strip().lower()
-        search_mask = (
-            (filtered_product_table["title"].fillna("").str.lower().str.contains(q, na=False))
-            | (filtered_product_table["store_clean"].fillna("").str.lower().str.contains(q, na=False))
-            | (filtered_product_table["display_title"].fillna("").str.lower().str.contains(q, na=False))
-        )
-        filtered_product_table = filtered_product_table[search_mask]
-
-    # Create display table with HTML tooltips
-    display_data = filtered_product_table.head(250).copy()
-
-    html_rows = []
-    for _, row in display_data.iterrows():
-        short_title = str(row["display_title"])[:50]
-        full_title = str(row["full_title_tooltip"]).replace('"', '&quot;').replace("'", "&#39;")
-        truncated = "..." if len(str(row["display_title"])) > 50 else ""
-
-        html_rows.append(
-            f'<tr><td>{row["parent_asin"]}</td><td><span title="{full_title}" style="cursor:help; text-decoration:underline dotted;">{short_title}{truncated}</span></td>'
-            f'<td>{row["store_clean"]}</td><td style="text-align:right">{int(row["filtered_review_count"])}</td>'
-            f'<td style="text-align:right">{row["average_rating"]:.2f}</td><td style="text-align:right">{int(row["rating_number"])}</td>'
-            f'<td style="text-align:right">${row["price"] if pd.notna(row["price"]) else "N/A"}</td></tr>'
-        )
-
-    table_html = f'''<table style="width:100%; border-collapse:collapse;">
-    <thead><tr style="background-color:#f0f0f0; border-bottom:2px solid #ddd;">
-    <th style="padding:8px; text-align:left">ASIN</th>
-    <th style="padding:8px; text-align:left">Product Title</th>
-    <th style="padding:8px; text-align:left">Store</th>
-    <th style="padding:8px; text-align:right">Reviews</th>
-    <th style="padding:8px; text-align:right">Rating</th>
-    <th style="padding:8px; text-align:right"># Ratings</th>
-    <th style="padding:8px; text-align:right">Price</th>
-    </tr></thead>
-    <tbody style="border-bottom:1px solid #eee;">
-    {"".join(html_rows)}
-    </tbody></table>'''
-
-    st.write(table_html, unsafe_allow_html=True)
 
 with users_tab:
-    section_header("User concentration and behaviour")
-
-    user_counts = (
-        filtered_reviews.groupby("user_id", as_index=False)
-        .size()
-        .rename(columns={"size": "filtered_review_count"})
-        .merge(users, on="user_id", how="left")
-        .sort_values("filtered_review_count", ascending=False)
+    show_users_tab(
+        filtered_reviews,
+        users,
+        pct,
+        top_share,
+        human_int
     )
-
-    u1, u2, u3, u4 = st.columns(4)
-    counts_series = user_counts["filtered_review_count"]
-    u1.metric("Top 1% user share", pct(top_share(counts_series, 0.01)))
-    u2.metric("Top 5% user share", pct(top_share(counts_series, 0.05)))
-    u3.metric("Median reviews per active user", f"{counts_series.median():.0f}")
-    u4.metric("Most active user", human_int(counts_series.max()))
-
-    st.markdown("#### Most active users under current filters")
-    st.dataframe(
-        user_counts[
-            [
-                "user_id",
-                "filtered_review_count",
-                "unique_products_reviewed",
-                "mean_rating_given",
-                "verified_purchase_ratio",
-                "mean_helpful_vote_received",
-                "avg_review_length_words",
-            ]
-        ].head(250),
-        use_container_width=True,
-        hide_index=True,
-    )
-
-st.caption(
-    "Tip: put dashboard_app.py in the same folder as the three CSVs, then run `streamlit run dashboard_app.py`."
-)
 
 with scatter_tab:
-    st.header("📊 Product Recommendation Scatter Plot")
+    show_scatter_tab()
 
-    # ---------- LOAD DATA ----------
-    SCATTER_FILE = Path(__file__).parent / "data" / "EShop_Product_Recommendations_Scatterplot_Inputs.xlsx"
-    df = load_scatter_data(SCATTER_FILE)
-
-    # ---------- USER INPUT ----------
-    user_input = st.text_input("Search by User ID")
-
-    # ---------- NO SEARCH → SHOW NOTHING ----------
-    if user_input.strip() == "":
-        st.info("Enter a User ID to view recommendations and scatter plot.")
-
-    # ---------- SEARCHED USER ----------
-    else:
-        plot_df = df[df["User_ID"] == user_input].copy()
-
-        if plot_df.empty:
-            st.warning("No data found for this user.")
-            st.stop()
-
-        # ---------- TOP 5 TABLE ----------
-        top = plot_df[plot_df["Group"].isin(TOP_ORDER)].copy()
-
-        if not top.empty:
-            st.subheader("Top 5 Product Recommendations")
-
-            top["order"] = top["Group"].map({
-                "Top1": 1, "Top2": 2, "Top3": 3, "Top4": 4, "Top5": 5
-            })
-
-            top = top.sort_values("order")
-
-            st.dataframe(
-                top[["DisplayLabel", "MaxCosine", "Predicted_Rating"]],
-                use_container_width=True,
-                hide_index=True
-            )
-
-        # ---------- SCATTER (ONLY SHOW AFTER SEARCH) ----------
-        fig = create_scatter_plot(plot_df)
-        st.plotly_chart(fig, use_container_width=True)
+with popularity_tab:
+    show_popularity_tab(products)

@@ -1,0 +1,791 @@
+body {
+    background-color: #f8fafc;
+}
+
+/* Title styling */
+h1 {
+    color: #1f77b4;
+    font-weight: 700;
+}
+
+/* Custom card style */
+.card {
+    padding: 20px;
+    border-radius: 12px;
+    background: white;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+/* Metric styling */
+[data-testid="stMetric"] {
+    background-color: #ffffff;
+    border-radius: 10px;
+    padding: 10px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
+
+/* =========================
+   KPI DASHBOARD TILES (MODERN UI)
+   Airbnb / Netflix STYLE
+========================= */
+
+div[data-testid="stMetric"] {
+    background: linear-gradient(135deg,
+        var(--card) 0%,
+        rgba(255,255,255,0.02) 100%
+    ) !important;
+
+    border: 1px solid var(--border) !important;
+    border-radius: 18px;
+
+    padding: 18px 16px;
+
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    transition: all 0.25s ease;
+
+    position: relative;
+    overflow: hidden;
+}
+
+/* subtle glowing accent bar (like modern dashboards) */
+div[data-testid="stMetric"]::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+
+    width: 100%;
+    height: 3px;
+
+    background: linear-gradient(90deg, #3b82f6, #8b5cf6, #22c55e);
+    opacity: 0.8;
+}
+
+/* hover = lift + glow */
+div[data-testid="stMetric"]:hover {
+    transform: translateY(-6px) scale(1.02);
+    box-shadow:
+        0 10px 25px rgba(0,0,0,0.12),
+        0 0 0 1px rgba(59,130,246,0.15);
+}
+
+/* label (top text) */
+div[data-testid="stMetricLabel"] {
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    color: #9ca3af !important;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+}
+
+/* value (big number) */
+div[data-testid="stMetricValue"] {
+    font-size: 34px !important;
+    font-weight: 800 !important;
+    color: var(--text) !important;
+
+    margin-top: 6px;
+    letter-spacing: -0.5px;
+}
+
+/* delta (if you use it later) */
+div[data-testid="stMetricDelta"] {
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    color: #22c55e !important;
+}
+
+/* dark mode enhancement */
+.stApp.dark div[data-testid="stMetric"] {
+    background: linear-gradient(135deg,
+        #1f2937 0%,
+        #111827 100%
+    ) !important;
+}
+
+/* glass-like feel in light mode */
+.stApp.light div[data-testid="stMetric"] {
+    backdrop-filter: blur(8px);
+}
+
+/* =========================
+   STREAMLIT TABS - FIXED MODERN STYLE
+========================= */
+
+/* TAB CONTAINER */
+div[data-testid="stTabs"] {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 8px;
+}
+
+/* TAB BUTTONS (IMPORTANT: target button directly) */
+div[data-testid="stTabs"] button[data-baseweb="tab"] {
+    background-color: transparent !important;
+    color: var(--text) !important;
+
+    border: 1px solid transparent !important;
+    border-radius: 10px !important;
+
+    padding: 8px 14px !important;
+    margin-right: 6px !important;
+
+    font-weight: 600 !important;
+
+    transition: all 0.2s ease;
+}
+
+/* HOVER STATE */
+div[data-testid="stTabs"] button[data-baseweb="tab"]:hover {
+    background-color: rgba(59, 130, 246, 0.08) !important;
+    border-color: rgba(59, 130, 246, 0.3) !important;
+}
+
+/* ACTIVE TAB (THIS IS THE KEY FIX) */
+div[data-testid="stTabs"] button[aria-selected="true"] {
+    background: linear-gradient(135deg, #3b82f6, #6366f1) !important;
+    color: white !important;
+
+    border: 1px solid transparent !important;
+
+    box-shadow: 0 4px 12px rgba(59,130,246,0.25);
+}
+
+/* TAB LIST WRAPPER */
+div[data-testid="stTabs"] [data-baseweb="tab-list"] {
+    gap: 6px;
+    background: transparent !important;
+}
+
+/* =========================
+   PAGE BACKGROUND
+========================= */
+
+.main {
+    background-color: #f5f7fb;
+}
+
+/* =========================
+   DATAFRAME STYLING
+========================= */
+
+[data-testid="stDataFrame"] {
+    border: 1px solid #ddd;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+/* =========================
+   BUTTONS
+========================= */
+
+.stButton button {
+    border-radius: 10px;
+    border: none;
+    padding: 0.6rem 1.2rem;
+    background-color: #111827;
+    color: white;
+    font-weight: 600;
+    transition: 0.2s;
+}
+
+.stButton button:hover {
+    background-color: #1f2937;
+    transform: translateY(-1px);
+}
+
+/* =========================
+   SEARCH INPUT BOX
+========================= */
+
+.stTextInput > div > div > input {
+    background-color: white !important;
+    border: 2px solid #d1d5db !important;
+    border-radius: 12px !important;
+    padding: 12px 16px !important;
+    font-size: 16px !important;
+    color: #111827 !important;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+}
+
+/* Focus effect */
+.stTextInput > div > div > input:focus {
+    border-color: #2563eb !important;
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.15) !important;
+}
+
+/* Label */
+.stTextInput label {
+    font-weight: 600 !important;
+    color: #242a35 !important;
+    font-size: 15px !important;
+}
+
+/* ========================================
+   STREAMLIT DATAFRAME — EXCEL STYLE
+======================================== */
+
+/* Main dataframe container */
+[data-testid="stDataFrame"] {
+    background-color: var(--card) !important;
+    color: var(--text) !important;
+}
+
+/* Header row */
+[data-testid="stDataFrame"] [role="columnheader"] {
+    background-color: #1e293b !important;
+    color: white !important;
+    font-weight: 700 !important;
+    border-right: 1px solid #475569 !important;
+
+    justify-content: flex-start !important;
+    text-align: left !important;
+}
+
+/* ALL table cells */
+[data-testid="stDataFrame"] [role="gridcell"] {
+    border-right: 1px solid #dbe4ee !important;
+    border-bottom: 1px solid #dbe4ee !important;
+
+    justify-content: flex-start !important;
+    text-align: left !important;
+
+    font-size: 14px !important;
+    color: #111827 !important;
+}
+
+/* FORCE LEFT ALIGN TEXT */
+[data-testid="stDataFrame"] div {
+    text-align: left !important;
+}
+
+/* EVEN ROWS */
+[data-testid="stDataFrame"] div[role="row"]:nth-child(even) [role="gridcell"] {
+    background-color: #eff6ff !important;
+}
+
+/* ODD ROWS */
+[data-testid="stDataFrame"] div[role="row"]:nth-child(odd) [role="gridcell"] {
+    background-color: #dbeafe !important;
+}
+table_html
+/* Hover effect */
+[data-testid="stDataFrame"] div[role="row"]:hover [role="gridcell"] {
+    background-color: #bfdbfe !important;
+    transition: 0.2s ease;
+}
+
+/* ========================================
+   HTML TABLES (Products tab)
+======================================== */
+
+table {
+    background-color: var(--card) !important;
+    color: var(--text) !important;
+}
+
+table th {
+    background-color: var(--table-header) !important;
+    color: var(--text) !important;
+}
+
+table td {
+    background-color: var(--card) !important;
+    color: var(--text) !important;
+    border: 1px solid var(--border) !important;
+}
+
+/* alternating rows */
+table tbody tr:nth-child(odd) {
+    background-color: #dbeafe !important;
+}
+
+table tbody tr:nth-child(even) {
+    background-color: #eff6ff !important;
+}
+
+/* hover */
+table tbody tr:hover {
+    background-color: #bfdbfe !important;
+}
+
+
+/* =========================================================
+   THEME VARIABLES
+========================================================= */
+
+:root {
+    --bg: #e1effc;
+    --text: #111827;
+    --muted: #6b7280;
+
+    --card: #cbe6fc;
+    --border: #e5e7eb;
+
+    --table-header: #1e293b;
+
+    --row-even: #eff6ff;
+    --row-odd: #dbeafe;
+    --row-hover: #bfdbfe;
+
+    --input-bg: #ffffff;
+
+    --shadow-sm: 0 2px 6px rgba(0,0,0,0.05);
+    --shadow-md: 0 6px 18px rgba(0,0,0,0.08);
+    --shadow-lg: 0 12px 30px rgba(0,0,0,0.12);
+}
+
+/* LIGHT MODE */
+.stApp.light {
+    --bg: #f8fafc;
+    --text: #111827;
+    --muted: #6b7280;
+
+    --card: #b7e8ff;
+    --border: #949596;
+
+    --table-header: #1e293b;
+
+    --row-even: #eff6ff;
+    --row-odd: #dbeafe;
+    --row-hover: #bfdbfe;
+
+    --input-bg: #ffffff;
+}
+
+/* DARK MODE */
+.stApp.dark {
+    --bg: #0f172a;
+    --text: #e5e7eb;
+    --muted: #94a3b8;
+
+    --card: #1e293b;
+    --border: #334155;
+
+    --table-header: #111827;
+
+    --row-even: #172554;
+    --row-odd: #1e3a8a;
+    --row-hover: #2563eb;
+
+    --input-bg: #111827;
+}
+
+
+/* =========================================================
+   GLOBAL APP
+========================================================= */
+
+html,
+body,
+.stApp,
+.main,
+.block-container {
+    background-color: var(--bg) !important;
+    color: var(--text) !important;
+}
+
+.main .block-container {
+    padding-top: 1rem;
+}
+
+/* force text colors */
+h1, h2, h3, h4, h5, h6,
+p, span, label, div {
+    color: var(--text);
+}
+
+/* =========================================================
+   TITLES
+========================================================= */
+
+h1 {
+    font-weight: 800;
+    letter-spacing: -0.5px;
+}
+
+h2, h3 {
+    font-weight: 700;
+}
+
+/* =========================
+   CARDS
+========================= */
+.card {
+    padding: 20px;
+    border-radius: 12px;
+    background: var(--card);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    border: 1px solid var(--border);
+}
+
+/* =========================================================
+   KPI METRICS
+========================================================= */
+
+div[data-testid="stMetric"] {
+    background: linear-gradient(
+        135deg,
+        var(--card) 0%,
+        rgba(255,255,255,0.02) 100%
+    ) !important;
+
+    border: 1px solid var(--border) !important;
+    border-radius: 18px;
+
+    padding: 18px 16px;
+
+    box-shadow: var(--shadow-sm);
+
+    transition: all 0.25s ease;
+
+    position: relative;
+    overflow: hidden;
+}
+
+/* top accent line */
+div[data-testid="stMetric"]::before {
+    content: "";
+    position: absolute;
+
+    top: 0;
+    left: 0;
+
+    width: 100%;
+    height: 3px;
+
+    background: linear-gradient(
+        90deg,
+        #3b82f6,
+        #8b5cf6,
+        #22c55e
+    );
+}
+
+/* hover */
+div[data-testid="stMetric"]:hover {
+    transform: translateY(-5px);
+
+    box-shadow:
+        var(--shadow-lg),
+        0 0 0 1px rgba(59,130,246,0.15);
+}
+
+/* metric label */
+div[data-testid="stMetricLabel"] {
+    color: var(--muted) !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+/* metric value */
+div[data-testid="stMetricValue"] {
+    color: var(--text) !important;
+    font-size: 34px !important;
+    font-weight: 800 !important;
+    margin-top: 6px;
+}
+
+/* metric delta */
+div[data-testid="stMetricDelta"] {
+    font-weight: 700 !important;
+}
+
+
+/* =========================================================
+   TABS
+========================================================= */
+
+div[data-testid="stTabs"] {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 8px;
+}
+
+/* tab list */
+div[data-testid="stTabs"] [data-baseweb="tab-list"] {
+    gap: 8px;
+}
+
+/* tab buttons */
+div[data-testid="stTabs"] button[data-baseweb="tab"] {
+    background: transparent !important;
+
+    color: var(--text) !important;
+
+    border-radius: 10px !important;
+    border: 1px solid transparent !important;
+
+    padding: 10px 16px !important;
+
+    font-weight: 600 !important;
+
+    transition: all 0.2s ease;
+}
+
+/* hover */
+div[data-testid="stTabs"] button[data-baseweb="tab"]:hover {
+    background: rgba(59,130,246,0.08) !important;
+    border-color: rgba(59,130,246,0.25) !important;
+}
+
+/* active tab */
+div[data-testid="stTabs"] button[aria-selected="true"] {
+    background: linear-gradient(
+        135deg,
+        #3b82f6,
+        #6366f1
+    ) !important;
+
+    color: white !important;
+
+    border: 1px solid transparent !important;
+
+    box-shadow: 0 4px 12px rgba(59,130,246,0.25);
+}
+
+/* =========================================================
+   BUTTONS
+========================================================= */
+
+.stButton button {
+    border-radius: 10px !important;
+
+    border: none !important;
+
+    padding: 0.65rem 1.2rem !important;
+
+    background: #111827 !important;
+    color: white !important;
+
+    font-weight: 700 !important;
+
+    transition: all 0.2s ease;
+}
+
+.stButton button:hover {
+    transform: translateY(-2px);
+
+    background: #1f2937 !important;
+}
+
+/* =========================================================
+   INPUTS
+========================================================= */
+
+.stTextInput input,
+.stNumberInput input,
+textarea {
+    background-color: var(--input-bg) !important;
+
+    color: var(--text) !important;
+
+    border: 2px solid var(--border) !important;
+
+    border-radius: 12px !important;
+
+    padding: 12px !important;
+
+    font-size: 15px !important;
+
+    box-shadow: var(--shadow-sm);
+}
+
+/* placeholder */
+.stTextInput input::placeholder {
+    color: var(--muted) !important;
+}
+
+/* focus */
+.stTextInput input:focus,
+.stNumberInput input:focus,
+textarea:focus {
+    border-color: #2563eb !important;
+
+    box-shadow:
+        0 0 0 3px rgba(37,99,235,0.15) !important;
+}
+
+/* labels */
+label {
+    color: var(--text) !important;
+    font-weight: 600 !important;
+}
+
+/* =========================================================
+   SIDEBAR
+========================================================= */
+
+section[data-testid="stSidebar"] {
+    background: var(--card) !important;
+    border-right: 1px solid var(--border);
+}
+
+section[data-testid="stSidebar"] * {
+    color: var(--text) !important;
+}
+
+/* =========================================================
+   EXCEL-STYLE DATAFRAME (CLEAN OVERRIDE)
+========================================================= */
+
+[data-testid="stDataFrame"] {
+    border-radius: 12px !important;
+    overflow: hidden !important;
+    border: 1px solid #cbd5e1 !important;
+}
+
+/* HEADER */
+[data-testid="stDataFrame"] [role="columnheader"] {
+    background-color: #1e3a8a !important;   /* deep Excel blue */
+    color: white !important;
+    font-weight: 700 !important;
+    padding: 10px !important;
+    border-right: 1px solid #334155 !important;
+}
+
+/* CELLS */
+[data-testid="stDataFrame"] [role="gridcell"] {
+    padding: 10px !important;
+    border-right: 1px solid #e2e8f0 !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+    color: #0f172a !important;
+    font-size: 14px !important;
+}
+
+/* ROW STRIPING (EXCEL BLUE STYLE) */
+[data-testid="stDataFrame"] div[role="row"]:nth-child(even) [role="gridcell"] {
+    background-color: #eff6ff !important;   /* light blue */
+}
+
+[data-testid="stDataFrame"] div[role="row"]:nth-child(odd) [role="gridcell"] {
+    background-color: #dbeafe !important;   /* slightly darker blue */
+}
+
+/* HOVER EFFECT */
+[data-testid="stDataFrame"] div[role="row"]:hover [role="gridcell"] {
+    background-color: #bfdbfe !important;
+    transition: 0.2s ease;
+}
+
+/* REMOVE WEIRD CENTER ALIGNMENT */
+[data-testid="stDataFrame"] div {
+    text-align: left !important;
+    justify-content: flex-start !important;
+}
+
+
+/* =========================================================
+   HTML TABLES
+========================================================= */
+
+table {
+    width: 100%;
+    border-collapse: collapse !important;
+
+    background: var(--card) !important;
+
+    color: var(--text) !important;
+
+    border-radius: 14px;
+    overflow: hidden;
+}
+
+table th {
+    background: var(--table-header) !important;
+
+    color: white !important;
+
+    padding: 12px;
+
+    border: 1px solid var(--border) !important;
+
+    text-align: left;
+}
+
+table td {
+    padding: 12px;
+
+    border: 1px solid var(--border) !important;
+
+    color: var(--text) !important;
+}
+
+/* striping */
+table tbody tr:nth-child(odd) {
+    background: var(--row-odd) !important;
+}
+
+table tbody tr:nth-child(even) {
+    background: var(--row-even) !important;
+}
+
+/* hover */
+table tbody tr:hover {
+    background: var(--row-hover) !important;
+}
+
+/* =========================================================
+   CUSTOM TABLE WRAPPER
+========================================================= */
+
+.custom-table,
+.bought-together-table {
+    border-radius: 14px;
+    overflow: hidden;
+
+    border: 1px solid var(--border);
+
+    box-shadow: var(--shadow-md);
+}
+
+/* =========================================================
+   CARDS
+========================================================= */
+
+.card {
+    background: var(--card);
+
+    border: 1px solid var(--border);
+
+    border-radius: 16px;
+
+    padding: 20px;
+
+    box-shadow: var(--shadow-sm);
+}
+
+/* =========================================================
+   PLOTLY CHART CONTAINER
+========================================================= */
+
+.js-plotly-plot,
+.plot-container {
+    border-radius: 14px !important;
+}
+
+/* =========================================================
+   SCROLLBAR
+========================================================= */
+
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #64748b;
+    border-radius: 999px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+header[data-testid="stHeader"] {
+    background-color: #c1d1fd !important;
+}
