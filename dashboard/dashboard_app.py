@@ -16,39 +16,6 @@ import streamlit as st
 import pandas as pd
 from sklearn.metrics.pairwise import cosine_similarity
 from bought_tgt import show_bought_together_chart
-
-if "dark_mode" not in st.session_state:
-    st.session_state.dark_mode = False
-
-col1, col2, col3 = st.columns([8, 1, 1])
-
-with col3:
-    if st.button("🌙" if not st.session_state.dark_mode else "☀️"):
-        st.session_state.dark_mode = not st.session_state.dark_mode
-        
-def apply_theme_class():
-    theme_class = "dark" if st.session_state.dark_mode else "light"
-
-    st.markdown(
-        f"""
-        <style>
-        .stApp {{
-            transition: all 0.3s ease;
-        }}
-        </style>
-
-        <script>
-        const app = window.parent.document.querySelector('.stApp');
-        if (app) {{
-            app.classList.remove('light', 'dark');
-            app.classList.add('{theme_class}');
-        }}
-        </script>
-        """,
-        unsafe_allow_html=True
-    )
-
-apply_theme_class()
     
 def load_css(file_name):
     with open(file_name) as f:
@@ -166,7 +133,8 @@ def schema_preview(source: Union[str, Path, bytes], nrows: int = 5) -> pd.DataFr
 # ---------- Helpers ----------
 # ---------- Plot Styling ----------
 def style_bar_chart(fig):
-    is_dark = st.session_state.get("dark_mode", False)
+
+    is_dark = st.get_option("theme.base") == "dark"
 
     bg = "#0f172a" if is_dark else "white"
     grid = "#334155" if is_dark else "#e5e7eb"

@@ -2,28 +2,13 @@ body {
     background-color: #f8fafc;
 }
 
-/* Title styling */
-h1 {
-    color: #1f77b4;
-    font-weight: 700;
+[data-theme="dark"] body,
+[data-theme="dark"] .stApp,
+[data-theme="dark"] .main,
+[data-theme="dark"] .block-container {
+    background-color: #0f172a !important;
+    color: #e5e7eb !important;
 }
-
-/* Custom card style */
-.card {
-    padding: 20px;
-    border-radius: 12px;
-    background: white;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-}
-
-/* Metric styling */
-[data-testid="stMetric"] {
-    background-color: #ffffff;
-    border-radius: 10px;
-    padding: 10px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-}
-
 /* =========================
    KPI DASHBOARD TILES (MODERN UI)
    Airbnb / Netflix STYLE
@@ -96,7 +81,7 @@ div[data-testid="stMetricDelta"] {
 }
 
 /* dark mode enhancement */
-.stApp.dark div[data-testid="stMetric"] {
+[data-theme="dark"] div[data-testid="stMetric"] {
     background: linear-gradient(135deg,
         #1f2937 0%,
         #111827 100%
@@ -104,7 +89,7 @@ div[data-testid="stMetricDelta"] {
 }
 
 /* glass-like feel in light mode */
-.stApp.light div[data-testid="stMetric"] {
+[data-theme="light"] div[data-testid="stMetric"] {
     backdrop-filter: blur(8px);
 }
 
@@ -143,8 +128,8 @@ div[data-testid="stTabs"] button[data-baseweb="tab"]:hover {
 }
 
 /* ACTIVE TAB (THIS IS THE KEY FIX) */
-div[data-testid="stTabs"] button[aria-selected="true"] {
-    background: linear-gradient(135deg, #3b82f6, #6366f1) !important;
+div[data-testid="stTabs"] button[data-baseweb="tab"][aria-selected="true"] {
+    background: linear-gradient(135deg, #78a9f7, #7678f3, #32337a) !important;
     color: white !important;
 
     border: 1px solid transparent !important;
@@ -152,10 +137,26 @@ div[data-testid="stTabs"] button[aria-selected="true"] {
     box-shadow: 0 4px 12px rgba(59,130,246,0.25);
 }
 
+div[data-testid="stTabs"] button[data-baseweb="tab"][aria-selected="true"] * {
+    color: white !important;
+}
+
 /* TAB LIST WRAPPER */
 div[data-testid="stTabs"] [data-baseweb="tab-list"] {
     gap: 6px;
     background: transparent !important;
+}
+
+/* TAB UNDERLINE GRADIENT */
+div[data-testid="stTabs"] [data-baseweb="tab-highlight"] {
+    background: linear-gradient(90deg, #3b82f6, #8b5cf6, #22c55e) !important;
+    height: 3px !important;
+}
+
+/* REMOVE BLUE CLICK OUTLINE */
+div[data-testid="stTabs"] button[data-baseweb="tab"]:focus {
+    outline: none !important;
+    box-shadow: none !important;
 }
 
 /* =========================
@@ -316,7 +317,7 @@ table tbody tr:hover {
 ========================================================= */
 
 :root {
-    --bg: #e1effc;
+    --bg: #e2eefa;
     --text: #111827;
     --muted: #6b7280;
 
@@ -337,7 +338,7 @@ table tbody tr:hover {
 }
 
 /* LIGHT MODE */
-.stApp.light {
+[data-theme="light"] {
     --bg: #f8fafc;
     --text: #111827;
     --muted: #6b7280;
@@ -355,7 +356,7 @@ table tbody tr:hover {
 }
 
 /* DARK MODE */
-.stApp.dark {
+[data-theme="dark"] {
     --bg: #0f172a;
     --text: #e5e7eb;
     --muted: #94a3b8;
