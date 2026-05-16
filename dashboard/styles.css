@@ -1,383 +1,57 @@
-body {
-    background-color: #f8fafc;
-}
-
-[data-theme="dark"] body,
-[data-theme="dark"] .stApp,
-[data-theme="dark"] .main,
-[data-theme="dark"] .block-container {
-    background-color: #0f172a !important;
-    color: #e5e7eb !important;
-}
-/* =========================
-   KPI DASHBOARD TILES (MODERN UI)
-   Airbnb / Netflix STYLE
-========================= */
-
-div[data-testid="stMetric"] {
-    background: linear-gradient(135deg,
-        var(--card) 0%,
-        rgba(255,255,255,0.02) 100%
-    ) !important;
-
-    border: 1px solid var(--border) !important;
-    border-radius: 18px;
-
-    padding: 18px 16px;
-
-    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-    transition: all 0.25s ease;
-
-    position: relative;
-    overflow: hidden;
-}
-
-/* subtle glowing accent bar (like modern dashboards) */
-div[data-testid="stMetric"]::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-
-    width: 100%;
-    height: 3px;
-
-    background: linear-gradient(90deg, #3b82f6, #8b5cf6, #22c55e);
-    opacity: 0.8;
-}
-
-/* hover = lift + glow */
-div[data-testid="stMetric"]:hover {
-    transform: translateY(-6px) scale(1.02);
-    box-shadow:
-        0 10px 25px rgba(0,0,0,0.12),
-        0 0 0 1px rgba(59,130,246,0.15);
-}
-
-/* label (top text) */
-div[data-testid="stMetricLabel"] {
-    font-size: 13px !important;
-    font-weight: 600 !important;
-    color: #9ca3af !important;
-    letter-spacing: 0.3px;
-    text-transform: uppercase;
-}
-
-/* value (big number) */
-div[data-testid="stMetricValue"] {
-    font-size: 34px !important;
-    font-weight: 800 !important;
-    color: var(--text) !important;
-
-    margin-top: 6px;
-    letter-spacing: -0.5px;
-}
-
-/* delta (if you use it later) */
-div[data-testid="stMetricDelta"] {
-    font-size: 12px !important;
-    font-weight: 600 !important;
-    color: #22c55e !important;
-}
-
-/* dark mode enhancement */
-[data-theme="dark"] div[data-testid="stMetric"] {
-    background: linear-gradient(135deg,
-        #1f2937 0%,
-        #111827 100%
-    ) !important;
-}
-
-/* glass-like feel in light mode */
-[data-theme="light"] div[data-testid="stMetric"] {
-    backdrop-filter: blur(8px);
-}
-
-/* =========================
-   STREAMLIT TABS - FIXED MODERN STYLE
-========================= */
-
-/* TAB CONTAINER */
-div[data-testid="stTabs"] {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 8px;
-}
-
-/* TAB BUTTONS (IMPORTANT: target button directly) */
-div[data-testid="stTabs"] button[data-baseweb="tab"] {
-    background-color: transparent !important;
-    color: var(--text) !important;
-
-    border: 1px solid transparent !important;
-    border-radius: 10px !important;
-
-    padding: 8px 14px !important;
-    margin-right: 6px !important;
-
-    font-weight: 600 !important;
-
-    transition: all 0.2s ease;
-}
-
-/* HOVER STATE */
-div[data-testid="stTabs"] button[data-baseweb="tab"]:hover {
-    background-color: rgba(59, 130, 246, 0.08) !important;
-    border-color: rgba(59, 130, 246, 0.3) !important;
-}
-
-/* ACTIVE TAB (THIS IS THE KEY FIX) */
-div[data-testid="stTabs"] button[data-baseweb="tab"][aria-selected="true"] {
-    background: linear-gradient(135deg, #78a9f7, #7678f3, #32337a) !important;
-    color: white !important;
-
-    border: 1px solid transparent !important;
-
-    box-shadow: 0 4px 12px rgba(59,130,246,0.25);
-}
-
-div[data-testid="stTabs"] button[data-baseweb="tab"][aria-selected="true"] * {
-    color: white !important;
-}
-
-/* TAB LIST WRAPPER */
-div[data-testid="stTabs"] [data-baseweb="tab-list"] {
-    gap: 6px;
-    background: transparent !important;
-}
-
-/* TAB UNDERLINE GRADIENT */
-div[data-testid="stTabs"] [data-baseweb="tab-highlight"] {
-    background: linear-gradient(90deg, #3b82f6, #8b5cf6, #22c55e) !important;
-    height: 3px !important;
-}
-
-/* REMOVE BLUE CLICK OUTLINE */
-div[data-testid="stTabs"] button[data-baseweb="tab"]:focus {
-    outline: none !important;
-    box-shadow: none !important;
-}
-
-/* =========================
-   PAGE BACKGROUND
-========================= */
-
-.main {
-    background-color: #f5f7fb;
-}
-
-/* =========================
-   DATAFRAME STYLING
-========================= */
-
-[data-testid="stDataFrame"] {
-    border: 1px solid #ddd;
-    border-radius: 12px;
-    overflow: hidden;
-}
-
-/* =========================
-   BUTTONS
-========================= */
-
-.stButton button {
-    border-radius: 10px;
-    border: none;
-    padding: 0.6rem 1.2rem;
-    background-color: #111827;
-    color: white;
-    font-weight: 600;
-    transition: 0.2s;
-}
-
-.stButton button:hover {
-    background-color: #1f2937;
-    transform: translateY(-1px);
-}
-
-/* =========================
-   SEARCH INPUT BOX
-========================= */
-
-.stTextInput > div > div > input {
-    background-color: white !important;
-    border: 2px solid #d1d5db !important;
-    border-radius: 12px !important;
-    padding: 12px 16px !important;
-    font-size: 16px !important;
-    color: #111827 !important;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.04);
-}
-
-/* Focus effect */
-.stTextInput > div > div > input:focus {
-    border-color: #2563eb !important;
-    box-shadow: 0 0 0 3px rgba(37,99,235,0.15) !important;
-}
-
-/* Label */
-.stTextInput label {
-    font-weight: 600 !important;
-    color: #242a35 !important;
-    font-size: 15px !important;
-}
-
-/* ========================================
-   STREAMLIT DATAFRAME — EXCEL STYLE
-======================================== */
-
-/* Main dataframe container */
-[data-testid="stDataFrame"] {
-    background-color: var(--card) !important;
-    color: var(--text) !important;
-}
-
-/* Header row */
-[data-testid="stDataFrame"] [role="columnheader"] {
-    background-color: #1e293b !important;
-    color: white !important;
-    font-weight: 700 !important;
-    border-right: 1px solid #475569 !important;
-
-    justify-content: flex-start !important;
-    text-align: left !important;
-}
-
-/* ALL table cells */
-[data-testid="stDataFrame"] [role="gridcell"] {
-    border-right: 1px solid #dbe4ee !important;
-    border-bottom: 1px solid #dbe4ee !important;
-
-    justify-content: flex-start !important;
-    text-align: left !important;
-
-    font-size: 14px !important;
-    color: #111827 !important;
-}
-
-/* FORCE LEFT ALIGN TEXT */
-[data-testid="stDataFrame"] div {
-    text-align: left !important;
-}
-
-/* EVEN ROWS */
-[data-testid="stDataFrame"] div[role="row"]:nth-child(even) [role="gridcell"] {
-    background-color: #eff6ff !important;
-}
-
-/* ODD ROWS */
-[data-testid="stDataFrame"] div[role="row"]:nth-child(odd) [role="gridcell"] {
-    background-color: #dbeafe !important;
-}
-table_html
-/* Hover effect */
-[data-testid="stDataFrame"] div[role="row"]:hover [role="gridcell"] {
-    background-color: #bfdbfe !important;
-    transition: 0.2s ease;
-}
-
-/* ========================================
-   HTML TABLES (Products tab)
-======================================== */
-
-table {
-    background-color: var(--card) !important;
-    color: var(--text) !important;
-}
-
-table th {
-    background-color: var(--table-header) !important;
-    color: var(--text) !important;
-}
-
-table td {
-    background-color: var(--card) !important;
-    color: var(--text) !important;
-    border: 1px solid var(--border) !important;
-}
-
-/* alternating rows */
-table tbody tr:nth-child(odd) {
-    background-color: #dbeafe !important;
-}
-
-table tbody tr:nth-child(even) {
-    background-color: #eff6ff !important;
-}
-
-/* hover */
-table tbody tr:hover {
-    background-color: #bfdbfe !important;
-}
-
-
 /* =========================================================
    THEME VARIABLES
 ========================================================= */
-
+ 
 :root {
-    --bg: #e2eefa;
+    --bg: #dce8f8;
     --text: #111827;
     --muted: #6b7280;
-
-    --card: #cbe6fc;
-    --border: #e5e7eb;
-
+ 
+    --card: rgba(203, 230, 252, 0.55);
+    --card-solid: #cbe6fc;
+    --border: rgba(148, 210, 255, 0.45);
+    --border-solid: #94d2ff;
+ 
+    --glass-bg: rgba(255, 255, 255, 0.35);
+    --glass-border: rgba(255, 255, 255, 0.55);
+    --glass-blur: blur(16px);
+    --glass-shadow: 0 8px 32px rgba(59, 130, 246, 0.12);
+ 
     --table-header: #1e293b;
-
-    --row-even: #eff6ff;
-    --row-odd: #dbeafe;
-    --row-hover: #bfdbfe;
-
-    --input-bg: #ffffff;
-
-    --shadow-sm: 0 2px 6px rgba(0,0,0,0.05);
-    --shadow-md: 0 6px 18px rgba(0,0,0,0.08);
-    --shadow-lg: 0 12px 30px rgba(0,0,0,0.12);
+ 
+    --row-even: rgba(239, 246, 255, 0.7);
+    --row-odd: rgba(219, 234, 254, 0.7);
+    --row-hover: rgba(191, 219, 254, 0.85);
+ 
+    --input-bg: rgba(255, 255, 255, 0.65);
+ 
+    --shadow-sm: 0 2px 8px rgba(59, 130, 246, 0.08);
+    --shadow-md: 0 6px 20px rgba(59, 130, 246, 0.12);
+    --shadow-lg: 0 16px 40px rgba(59, 130, 246, 0.18);
+    --shadow-glass: 0 8px 32px rgba(59, 130, 246, 0.15), inset 0 1px 0 rgba(255,255,255,0.6);
 }
-
+ 
 /* LIGHT MODE */
 [data-theme="light"] {
-    --bg: #f8fafc;
+    --bg: #e8f2fc;
     --text: #111827;
     --muted: #6b7280;
-
-    --card: #b7e8ff;
-    --border: #949596;
-
-    --table-header: #1e293b;
-
-    --row-even: #eff6ff;
-    --row-odd: #dbeafe;
-    --row-hover: #bfdbfe;
-
-    --input-bg: #ffffff;
+ 
+    --card: rgba(183, 232, 255, 0.5);
+    --card-solid: #b7e8ff;
+    --border: rgba(148, 210, 255, 0.5);
+    --border-solid: #94d2ff;
+ 
+    --glass-bg: rgba(255, 255, 255, 0.4);
+    --glass-border: rgba(255, 255, 255, 0.6);
+ 
+    --input-bg: rgba(255, 255, 255, 0.7);
 }
-
-/* DARK MODE */
-[data-theme="dark"] {
-    --bg: #0f172a;
-    --text: #e5e7eb;
-    --muted: #94a3b8;
-
-    --card: #1e293b;
-    --border: #334155;
-
-    --table-header: #111827;
-
-    --row-even: #172554;
-    --row-odd: #1e3a8a;
-    --row-hover: #2563eb;
-
-    --input-bg: #111827;
-}
-
-
+ 
 /* =========================================================
-   GLOBAL APP
+   GLOBAL BACKGROUND — animated gradient mesh
 ========================================================= */
-
+ 
 html,
 body,
 .stApp,
@@ -386,407 +60,612 @@ body,
     background-color: var(--bg) !important;
     color: var(--text) !important;
 }
-
+ 
+/* Animated soft gradient background on the app */
+.stApp {
+    background: linear-gradient(
+        135deg,
+        #dce8f8 0%,
+        #c8dff7 25%,
+        #d8eeff 50%,
+        #cfe5ff 75%,
+        #dce8f8 100%
+    ) !important;
+    background-size: 400% 400% !important;
+    animation: bgShift 18s ease infinite !important;
+}
+ 
+@keyframes bgShift {
+    0%   { background-position: 0% 50%; }
+    50%  { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+ 
 .main .block-container {
     padding-top: 1rem;
 }
-
+ 
 /* force text colors */
 h1, h2, h3, h4, h5, h6,
 p, span, label, div {
     color: var(--text);
 }
-
+ 
 /* =========================================================
    TITLES
 ========================================================= */
-
+ 
 h1 {
     font-weight: 800;
     letter-spacing: -0.5px;
 }
-
+ 
 h2, h3 {
     font-weight: 700;
 }
-
-/* =========================
-   CARDS
-========================= */
-.card {
-    padding: 20px;
-    border-radius: 12px;
-    background: var(--card);
-    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-    border: 1px solid var(--border);
-}
-
+ 
 /* =========================================================
-   KPI METRICS
+   GLASSMORPHISM MIXIN — applied as utility class + direct selectors
 ========================================================= */
-
+ 
+.glass,
+div[data-testid="stMetric"],
+div[data-testid="stTabs"],
+section[data-testid="stSidebar"],
+[data-testid="stDataFrame"],
+.card,
+.feature-card {
+    backdrop-filter: var(--glass-blur) saturate(180%) !important;
+    -webkit-backdrop-filter: var(--glass-blur) saturate(180%) !important;
+}
+ 
+/* =========================================================
+   KPI METRIC TILES — glass + glow
+========================================================= */
+ 
 div[data-testid="stMetric"] {
     background: linear-gradient(
         135deg,
-        var(--card) 0%,
-        rgba(255,255,255,0.02) 100%
+        rgba(255, 255, 255, 0.45) 0%,
+        rgba(203, 230, 252, 0.35) 100%
     ) !important;
-
-    border: 1px solid var(--border) !important;
-    border-radius: 18px;
-
-    padding: 18px 16px;
-
-    box-shadow: var(--shadow-sm);
-
-    transition: all 0.25s ease;
-
+ 
+    border: 1px solid var(--glass-border) !important;
+    border-radius: 20px !important;
+ 
+    padding: 20px 18px !important;
+ 
+    box-shadow: var(--shadow-glass) !important;
+ 
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+ 
     position: relative;
     overflow: hidden;
 }
-
-/* top accent line */
+ 
+/* Frosted shimmer overlay */
+div[data-testid="stMetric"]::after {
+    content: "";
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: linear-gradient(
+        135deg,
+        rgba(255,255,255,0.25) 0%,
+        transparent 60%
+    );
+    pointer-events: none;
+    border-radius: 20px;
+}
+ 
+/* Accent bar */
 div[data-testid="stMetric"]::before {
     content: "";
     position: absolute;
-
-    top: 0;
-    left: 0;
-
-    width: 100%;
-    height: 3px;
-
-    background: linear-gradient(
-        90deg,
-        #3b82f6,
-        #8b5cf6,
-        #22c55e
-    );
+    top: 0; left: 0;
+    width: 100%; height: 3px;
+    background: linear-gradient(90deg, #3b82f6, #8b5cf6, #22c55e);
+    opacity: 0.9;
+    z-index: 1;
 }
-
-/* hover */
+ 
+/* Hover = lift + glow */
 div[data-testid="stMetric"]:hover {
-    transform: translateY(-5px);
-
+    transform: translateY(-6px) scale(1.02);
     box-shadow:
-        var(--shadow-lg),
-        0 0 0 1px rgba(59,130,246,0.15);
+        0 20px 50px rgba(59, 130, 246, 0.2),
+        0 0 0 1px rgba(59, 130, 246, 0.25),
+        inset 0 1px 0 rgba(255,255,255,0.7) !important;
 }
-
-/* metric label */
+ 
+/* Metric label */
 div[data-testid="stMetricLabel"] {
     color: var(--muted) !important;
-    font-size: 13px !important;
+    font-size: 12px !important;
     font-weight: 700 !important;
     text-transform: uppercase;
-    letter-spacing: 0.4px;
+    letter-spacing: 0.6px;
 }
-
-/* metric value */
+ 
+/* Metric value */
 div[data-testid="stMetricValue"] {
     color: var(--text) !important;
     font-size: 34px !important;
     font-weight: 800 !important;
     margin-top: 6px;
+    letter-spacing: -0.5px;
 }
-
-/* metric delta */
+ 
+/* Metric delta */
 div[data-testid="stMetricDelta"] {
+    font-size: 12px !important;
     font-weight: 700 !important;
+    color: #22c55e !important;
 }
-
-
+ 
 /* =========================================================
-   TABS
+   TABS — frosted glass pill container
 ========================================================= */
-
+ 
 div[data-testid="stTabs"] {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 8px;
+    background: rgba(255, 255, 255, 0.3) !important;
+    border: 1px solid var(--glass-border) !important;
+    border-radius: 16px !important;
+    padding: 8px !important;
+    box-shadow: var(--shadow-glass) !important;
 }
-
-/* tab list */
+ 
+/* Tab list */
 div[data-testid="stTabs"] [data-baseweb="tab-list"] {
-    gap: 8px;
+    gap: 6px !important;
+    background: transparent !important;
 }
-
-/* tab buttons */
+ 
+/* Tab buttons */
 div[data-testid="stTabs"] button[data-baseweb="tab"] {
     background: transparent !important;
-
     color: var(--text) !important;
-
     border-radius: 10px !important;
     border: 1px solid transparent !important;
-
     padding: 10px 16px !important;
-
     font-weight: 600 !important;
-
-    transition: all 0.2s ease;
+    transition: all 0.2s ease !important;
 }
-
-/* hover */
+ 
+/* Hover */
 div[data-testid="stTabs"] button[data-baseweb="tab"]:hover {
-    background: rgba(59,130,246,0.08) !important;
-    border-color: rgba(59,130,246,0.25) !important;
+    background: rgba(59, 130, 246, 0.1) !important;
+    border-color: rgba(59, 130, 246, 0.3) !important;
+    backdrop-filter: blur(8px) !important;
 }
-
-/* active tab */
-div[data-testid="stTabs"] button[aria-selected="true"] {
-    background: linear-gradient(
-        135deg,
-        #3b82f6,
-        #6366f1
-    ) !important;
-
+ 
+/* Active tab */
+div[data-testid="stTabs"] button[data-baseweb="tab"][aria-selected="true"] {
+    background: linear-gradient(135deg, #78a9f7, #7678f3, #32337a) !important;
     color: white !important;
-
-    border: 1px solid transparent !important;
-
-    box-shadow: 0 4px 12px rgba(59,130,246,0.25);
-}
-
-/* =========================================================
-   BUTTONS
-========================================================= */
-
-.stButton button {
-    border-radius: 10px !important;
-
-    border: none !important;
-
-    padding: 0.65rem 1.2rem !important;
-
-    background: #111827 !important;
-    color: white !important;
-
-    font-weight: 700 !important;
-
-    transition: all 0.2s ease;
-}
-
-.stButton button:hover {
-    transform: translateY(-2px);
-
-    background: #1f2937 !important;
-}
-
-/* =========================================================
-   INPUTS
-========================================================= */
-
-.stTextInput input,
-.stNumberInput input,
-textarea {
-    background-color: var(--input-bg) !important;
-
-    color: var(--text) !important;
-
-    border: 2px solid var(--border) !important;
-
-    border-radius: 12px !important;
-
-    padding: 12px !important;
-
-    font-size: 15px !important;
-
-    box-shadow: var(--shadow-sm);
-}
-
-/* placeholder */
-.stTextInput input::placeholder {
-    color: var(--muted) !important;
-}
-
-/* focus */
-.stTextInput input:focus,
-.stNumberInput input:focus,
-textarea:focus {
-    border-color: #2563eb !important;
-
+    border: 1px solid rgba(255,255,255,0.3) !important;
     box-shadow:
-        0 0 0 3px rgba(37,99,235,0.15) !important;
+        0 4px 15px rgba(59, 130, 246, 0.35),
+        inset 0 1px 0 rgba(255,255,255,0.3) !important;
 }
-
-/* labels */
-label {
-    color: var(--text) !important;
-    font-weight: 600 !important;
+ 
+div[data-testid="stTabs"] button[data-baseweb="tab"][aria-selected="true"] * {
+    color: white !important;
 }
-
+ 
+/* Tab highlight bar */
+div[data-testid="stTabs"] [data-baseweb="tab-highlight"] {
+    background: linear-gradient(90deg, #3b82f6, #8b5cf6, #22c55e) !important;
+    height: 3px !important;
+}
+ 
+/* Remove click outline */
+div[data-testid="stTabs"] button[data-baseweb="tab"]:focus {
+    outline: none !important;
+    box-shadow: none !important;
+}
+ 
 /* =========================================================
-   SIDEBAR
+   SIDEBAR — frosted glass panel
 ========================================================= */
-
+ 
 section[data-testid="stSidebar"] {
-    background: var(--card) !important;
-    border-right: 1px solid var(--border);
+    background: rgba(200, 223, 247, 0.55) !important;
+    border-right: 1px solid var(--glass-border) !important;
+    box-shadow: 4px 0 24px rgba(59, 130, 246, 0.08) !important;
 }
-
+ 
 section[data-testid="stSidebar"] * {
     color: var(--text) !important;
 }
-
+ 
 /* =========================================================
-   EXCEL-STYLE DATAFRAME (CLEAN OVERRIDE)
+   HEADER — glass bar
 ========================================================= */
-
-[data-testid="stDataFrame"] {
-    border-radius: 12px !important;
-    overflow: hidden !important;
-    border: 1px solid #cbd5e1 !important;
+ 
+header[data-testid="stHeader"] {
+    background: rgba(193, 209, 253, 0.6) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    border-bottom: 1px solid rgba(255,255,255,0.4) !important;
 }
-
-/* HEADER */
+ 
+/* =========================================================
+   DATAFRAME — glass container + excel rows
+========================================================= */
+ 
+[data-testid="stDataFrame"] {
+    border-radius: 14px !important;
+    overflow: hidden !important;
+    border: 1px solid var(--glass-border) !important;
+    box-shadow: var(--shadow-glass) !important;
+    background: rgba(255,255,255,0.25) !important;
+}
+ 
+/* Header */
 [data-testid="stDataFrame"] [role="columnheader"] {
-    background-color: #1e3a8a !important;   /* deep Excel blue */
+    background-color: rgba(30, 58, 138, 0.9) !important;
     color: white !important;
     font-weight: 700 !important;
     padding: 10px !important;
-    border-right: 1px solid #334155 !important;
+    border-right: 1px solid rgba(51, 65, 85, 0.6) !important;
+    backdrop-filter: blur(4px) !important;
 }
-
-/* CELLS */
+ 
+/* Cells */
 [data-testid="stDataFrame"] [role="gridcell"] {
     padding: 10px !important;
-    border-right: 1px solid #e2e8f0 !important;
-    border-bottom: 1px solid #e2e8f0 !important;
+    border-right: 1px solid rgba(226, 232, 240, 0.6) !important;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.6) !important;
     color: #0f172a !important;
     font-size: 14px !important;
 }
-
-/* ROW STRIPING (EXCEL BLUE STYLE) */
+ 
+/* Row striping */
 [data-testid="stDataFrame"] div[role="row"]:nth-child(even) [role="gridcell"] {
-    background-color: #eff6ff !important;   /* light blue */
+    background-color: rgba(239, 246, 255, 0.65) !important;
 }
-
+ 
 [data-testid="stDataFrame"] div[role="row"]:nth-child(odd) [role="gridcell"] {
-    background-color: #dbeafe !important;   /* slightly darker blue */
+    background-color: rgba(219, 234, 254, 0.65) !important;
 }
-
-/* HOVER EFFECT */
+ 
+/* Hover */
 [data-testid="stDataFrame"] div[role="row"]:hover [role="gridcell"] {
-    background-color: #bfdbfe !important;
+    background-color: rgba(191, 219, 254, 0.8) !important;
     transition: 0.2s ease;
 }
-
-/* REMOVE WEIRD CENTER ALIGNMENT */
+ 
+/* Left align */
 [data-testid="stDataFrame"] div {
     text-align: left !important;
     justify-content: flex-start !important;
 }
-
-
+ 
 /* =========================================================
    HTML TABLES
 ========================================================= */
-
+ 
 table {
     width: 100%;
     border-collapse: collapse !important;
-
-    background: var(--card) !important;
-
+    background: rgba(203, 230, 252, 0.4) !important;
     color: var(--text) !important;
-
     border-radius: 14px;
     overflow: hidden;
+    backdrop-filter: blur(8px) !important;
 }
-
+ 
 table th {
-    background: var(--table-header) !important;
-
+    background: rgba(30, 41, 59, 0.88) !important;
     color: white !important;
-
     padding: 12px;
-
-    border: 1px solid var(--border) !important;
-
+    border: 1px solid rgba(71, 85, 105, 0.4) !important;
     text-align: left;
 }
-
+ 
 table td {
     padding: 12px;
-
-    border: 1px solid var(--border) !important;
-
+    border: 1px solid rgba(203, 230, 252, 0.5) !important;
     color: var(--text) !important;
 }
-
-/* striping */
+ 
 table tbody tr:nth-child(odd) {
-    background: var(--row-odd) !important;
+    background: rgba(219, 234, 254, 0.6) !important;
 }
-
+ 
 table tbody tr:nth-child(even) {
-    background: var(--row-even) !important;
+    background: rgba(239, 246, 255, 0.6) !important;
 }
-
-/* hover */
+ 
 table tbody tr:hover {
-    background: var(--row-hover) !important;
+    background: rgba(191, 219, 254, 0.75) !important;
 }
-
+ 
 /* =========================================================
-   CUSTOM TABLE WRAPPER
+   INPUTS — frosted glass fields
 ========================================================= */
-
-.custom-table,
-.bought-together-table {
-    border-radius: 14px;
-    overflow: hidden;
-
-    border: 1px solid var(--border);
-
-    box-shadow: var(--shadow-md);
+ 
+.stTextInput input,
+.stNumberInput input,
+textarea {
+    background: rgba(255, 255, 255, 0.55) !important;
+    color: var(--text) !important;
+    border: 1.5px solid rgba(148, 163, 184, 0.5) !important;
+    border-radius: 12px !important;
+    padding: 12px !important;
+    font-size: 15px !important;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.06),
+                inset 0 1px 0 rgba(255,255,255,0.5) !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+    transition: all 0.2s ease !important;
 }
-
+ 
+.stTextInput input::placeholder {
+    color: var(--muted) !important;
+}
+ 
+.stTextInput input:focus,
+.stNumberInput input:focus,
+textarea:focus {
+    border-color: rgba(37, 99, 235, 0.7) !important;
+    background: rgba(255, 255, 255, 0.7) !important;
+    box-shadow:
+        0 0 0 3px rgba(37, 99, 235, 0.12),
+        0 4px 12px rgba(59, 130, 246, 0.1),
+        inset 0 1px 0 rgba(255,255,255,0.6) !important;
+}
+ 
+label {
+    color: var(--text) !important;
+    font-weight: 600 !important;
+}
+ 
+/* =========================================================
+   BUTTONS — glass + dark
+========================================================= */
+ 
+.stButton button {
+    border-radius: 12px !important;
+    border: 1px solid rgba(255,255,255,0.2) !important;
+    padding: 0.65rem 1.2rem !important;
+    background: rgba(17, 24, 39, 0.88) !important;
+    color: white !important;
+    font-weight: 700 !important;
+    transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+    backdrop-filter: blur(8px) !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15),
+                inset 0 1px 0 rgba(255,255,255,0.1) !important;
+}
+ 
+.stButton button:hover {
+    transform: translateY(-2px) !important;
+    background: rgba(31, 41, 55, 0.95) !important;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.2),
+                inset 0 1px 0 rgba(255,255,255,0.1) !important;
+}
+ 
+button[kind="primary"] {
+    background: rgba(59, 130, 246, 0.88) !important;
+    color: white !important;
+    border-radius: 12px !important;
+    border: 1px solid rgba(147, 197, 253, 0.4) !important;
+    box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3),
+                inset 0 1px 0 rgba(255,255,255,0.2) !important;
+}
+ 
+button[kind="primary"]:hover {
+    background: rgba(37, 99, 235, 0.92) !important;
+    box-shadow: 0 8px 24px rgba(59, 130, 246, 0.4),
+                inset 0 1px 0 rgba(255,255,255,0.2) !important;
+}
+ 
+div[data-testid="stButton"]:has(button[key="save_table"]) button {
+    background: rgba(59, 130, 246, 0.88) !important;
+    color: white !important;
+}
+ 
 /* =========================================================
    CARDS
 ========================================================= */
-
+ 
 .card {
-    background: var(--card);
-
-    border: 1px solid var(--border);
-
-    border-radius: 16px;
-
-    padding: 20px;
-
-    box-shadow: var(--shadow-sm);
+    background: rgba(255, 255, 255, 0.38) !important;
+    border: 1px solid var(--glass-border) !important;
+    border-radius: 18px !important;
+    padding: 22px !important;
+    box-shadow: var(--shadow-glass) !important;
+    backdrop-filter: var(--glass-blur) !important;
+    -webkit-backdrop-filter: var(--glass-blur) !important;
+    position: relative;
+    overflow: hidden;
 }
-
+ 
+.card::after {
+    content: "";
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 60%);
+    pointer-events: none;
+    border-radius: 18px;
+}
+ 
 /* =========================================================
-   PLOTLY CHART CONTAINER
+   FEATURE ENGINEERING VIEW — glass cards
 ========================================================= */
-
+ 
+.feature-card {
+    background: rgba(255, 255, 255, 0.38) !important;
+    padding: 26px;
+    border-radius: 20px;
+    border: 1px solid var(--glass-border) !important;
+    box-shadow: var(--shadow-glass) !important;
+    backdrop-filter: var(--glass-blur) !important;
+    -webkit-backdrop-filter: var(--glass-blur) !important;
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+ 
+.feature-card::after {
+    content: "";
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 50%;
+    background: linear-gradient(180deg, rgba(255,255,255,0.25) 0%, transparent 100%);
+    pointer-events: none;
+}
+ 
+.feature-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 50px rgba(59, 130, 246, 0.2),
+                inset 0 1px 0 rgba(255,255,255,0.65) !important;
+}
+ 
+.feature-title {
+    font-size: 24px;
+    font-weight: 800;
+    margin-bottom: 24px;
+    color: var(--text);
+}
+ 
+.feature-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 18px;
+}
+ 
+.feature-label {
+    width: 150px;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+}
+ 
+.progress-container {
+    flex-grow: 1;
+    height: 14px;
+    background: rgba(219, 234, 254, 0.6);
+    border-radius: 999px;
+    overflow: hidden;
+    border: 1px solid rgba(191, 219, 254, 0.5);
+    backdrop-filter: blur(4px);
+}
+ 
+.progress-bar {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #3b82f6, #6366f1, #8b5cf6);
+    box-shadow: 0 0 8px rgba(99, 102, 241, 0.5);
+    transition: width 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+ 
+.feature-percent {
+    width: 55px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+}
+ 
+.feature-footer {
+    margin-top: 20px;
+    font-size: 14px;
+    color: var(--muted);
+    line-height: 1.6;
+}
+ 
+/* =========================================================
+   CUSTOM TABLE WRAPPERS
+========================================================= */
+ 
+.custom-table,
+.bought-together-table {
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--shadow-glass);
+    backdrop-filter: blur(12px);
+    background: rgba(255,255,255,0.3);
+}
+ 
+/* =========================================================
+   PLOTLY CHART CONTAINER — glass frame
+========================================================= */
+ 
 .js-plotly-plot,
 .plot-container {
-    border-radius: 14px !important;
+    border-radius: 16px !important;
+    background: rgba(255,255,255,0.2) !important;
+    backdrop-filter: blur(8px) !important;
 }
-
+ 
 /* =========================================================
-   SCROLLBAR
+   SCROLLBAR — subtle glass style
 ========================================================= */
-
+ 
 ::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
+    width: 8px;
+    height: 8px;
 }
-
+ 
 ::-webkit-scrollbar-thumb {
-    background: #64748b;
+    background: rgba(100, 116, 139, 0.5);
+    border-radius: 999px;
+    backdrop-filter: blur(4px);
+}
+ 
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(100, 116, 139, 0.75);
+}
+ 
+::-webkit-scrollbar-track {
+    background: rgba(255,255,255,0.1);
     border-radius: 999px;
 }
-
-::-webkit-scrollbar-track {
-    background: transparent;
+ 
+/* =========================================================
+   SELECTBOX / MULTISELECT — glass
+========================================================= */
+ 
+.stSelectbox > div > div,
+.stMultiSelect > div > div {
+    background: rgba(255, 255, 255, 0.5) !important;
+    border: 1.5px solid rgba(148, 163, 184, 0.45) !important;
+    border-radius: 12px !important;
+    backdrop-filter: blur(8px) !important;
 }
-
-header[data-testid="stHeader"] {
-    background-color: #c1d1fd !important;
+ 
+/* =========================================================
+   SLIDER — glass track
+========================================================= */
+ 
+.stSlider > div > div > div {
+    background: rgba(203, 230, 252, 0.6) !important;
+}
+ 
+/* =========================================================
+   EXPANDER — glass panel
+========================================================= */
+ 
+details[data-testid="stExpander"] {
+    background: rgba(255, 255, 255, 0.3) !important;
+    border: 1px solid var(--glass-border) !important;
+    border-radius: 14px !important;
+    backdrop-filter: blur(12px) !important;
+    box-shadow: var(--shadow-sm) !important;
+}
+ 
+/* =========================================================
+   DIVIDER — subtle gradient line
+========================================================= */
+ 
+hr {
+    border: none !important;
+    height: 1px !important;
+    background: linear-gradient(90deg, transparent, rgba(59,130,246,0.3), transparent) !important;
+    margin: 1.5rem 0 !important;
 }
