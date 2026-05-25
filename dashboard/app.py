@@ -41,7 +41,7 @@ def _load_css(path: str) -> None:
 _load_css("styles.css")
 st.markdown("<style>.block-container{padding-top:1rem}</style>", unsafe_allow_html=True)
  
-st.title("📊 Interactive Dashboard — E-Shop Recommendation System")
+st.title("Interactive Dashboard — E-Shop Recommendation System")
 st.write("Explore reviews, products, users, and recommendation outputs with real-time filters.")
  
 with st.sidebar:
