@@ -9,6 +9,7 @@ import streamlit as st
 from config import SCATTER_FILE, TOP_ORDER
 from data_loader import load_scatter
 from utils import human_int
+from llm_insights import show_llm_insights
  
  
 # ── Chart builder ─────────────────────────────────────────────────────────────
@@ -23,16 +24,12 @@ def _build_scatter(df: pd.DataFrame) -> go.Figure:
     top = top.sort_values("_order")
  
     fig = go.Figure()
- 
-    # background cloud
     fig.add_trace(go.Scatter(
         x=rand["MaxCosine"], y=rand["Predicted_Rating"],
         mode="markers", name="All",
         marker=dict(size=6, color="rgba(120,120,120,0.25)"),
         hoverinfo="skip",
     ))
- 
-    # near / far clusters
     fig.add_trace(go.Scatter(
         x=near["MaxCosine"], y=near["Predicted_Rating"],
         mode="markers", name="Near",
@@ -43,16 +40,12 @@ def _build_scatter(df: pd.DataFrame) -> go.Figure:
         mode="markers", name="Far",
         marker=dict(size=10, color="red"),
     ))
- 
-    # glow halo for top 5
     fig.add_trace(go.Scatter(
         x=top["MaxCosine"], y=top["Predicted_Rating"],
         mode="markers", name="Top glow",
         marker=dict(size=26, color="rgba(59,130,246,0.22)"),
         hoverinfo="skip", showlegend=False,
     ))
- 
-    # top 5 connected line + labels
     fig.add_trace(go.Scatter(
         x=top["MaxCosine"], y=top["Predicted_Rating"],
         mode="lines+markers+text",
@@ -61,35 +54,312 @@ def _build_scatter(df: pd.DataFrame) -> go.Figure:
         line=dict(color="#3b82f6", width=3),
         marker=dict(size=14, color="#3b82f6"),
     ))
- 
     fig.update_layout(
-        title="Recommendation Scatter Plot",
-        height=650,
-        xaxis_title="Cosine Similarity",
-        yaxis_title="Predicted Rating",
+        title="Recommendation Scatter Plot", height=650,
+        xaxis_title="Cosine Similarity", yaxis_title="Predicted Rating",
     )
     return fig
  
  
+# ── ASIN resolution ───────────────────────────────────────────────────────────
+ 
+def _find_asin_by_title(label: str, products_lookup: pd.DataFrame) -> Optional[str]:
+    """
+    Find parent_asin by matching DisplayLabel against product titles.
+    Tries three progressively looser strategies.
+    """
+    label_clean = str(label).lower().strip()
+ 
+    # Strategy 1: exact title match
+    mask = products_lookup["title"].str.lower().str.strip() == label_clean
+    if mask.any():
+        return str(products_lookup[mask].iloc[0]["parent_asin"])
+ 
+    # Strategy 2: first 25 chars of label appears in title
+    prefix = label_clean[:25]
+    if len(prefix) > 5:
+        mask = products_lookup["title"].str.lower().str.contains(
+            prefix, na=False, regex=False
+        )
+        if mask.any():
+            return str(products_lookup[mask].iloc[0]["parent_asin"])
+ 
+    # Strategy 3: first 25 chars of title appears in label
+    for _, prow in products_lookup.iterrows():
+        title_prefix = str(prow["title"]).lower()[:25]
+        if len(title_prefix) > 5 and title_prefix in label_clean:
+            return str(prow["parent_asin"])
+ 
+    return None
+ 
+ 
+def _resolve_asin(row: pd.Series, asin_col: Optional[str],
+                  products_lookup: pd.DataFrame) -> Optional[str]:
+    """Return ASIN from column if present, else fall back to title matching."""
+    if asin_col and pd.notna(row.get(asin_col)):
+        return str(row[asin_col]).strip()
+    label = str(row.get("DisplayLabel", ""))
+    return _find_asin_by_title(label, products_lookup)
+ 
+ 
+# ── User profile ──────────────────────────────────────────────────────────────
+ 
+def _get_user_profile(user_id: str, reviews: pd.DataFrame,
+                      products_lookup: pd.DataFrame) -> dict:
+    user_rev = reviews[reviews["user_id"] == user_id].copy()
+    profile  = {"found": False, "total_reviews": 0}
+    if user_rev.empty:
+        return profile
+ 
+    profile["found"]            = True
+    profile["total_reviews"]    = len(user_rev)
+    profile["avg_rating_given"] = user_rev["rating"].mean()
+    profile["pct_5star"]        = (user_rev["rating"] == 5).mean() * 100
+    profile["pct_1star"]        = (user_rev["rating"] == 1).mean() * 100
+    profile["verified_pct"]     = user_rev["verified_purchase"].mean() * 100
+    profile["avg_words"]        = user_rev["review_length_words"].mean()
+    profile["disliked_count"]   = int((user_rev["rating"] <= 2).sum())
+ 
+    top_rated = (
+        user_rev[user_rev["rating"] >= 4]
+        .merge(products_lookup[["parent_asin", "title"]], on="parent_asin", how="left")
+        .sort_values("rating", ascending=False)
+        .head(5)
+    )
+    profile["top_rated"] = [
+        {"title": str(r.get("title", r["parent_asin"]))[:60], "rating": int(r["rating"])}
+        for _, r in top_rated.iterrows()
+    ]
+    return profile
+ 
+ 
+# ── Product review stats ──────────────────────────────────────────────────────
+ 
+def _get_product_stats(asin: str, reviews: pd.DataFrame,
+                       products_lookup: pd.DataFrame) -> dict:
+    prod_rev  = reviews[reviews["parent_asin"] == asin]
+    prod_info = products_lookup[products_lookup["parent_asin"] == asin]
+    stats: dict = {"asin": asin, "found": False}
+ 
+    if not prod_info.empty:
+        r = prod_info.iloc[0]
+        stats.update({
+            "found":        True,
+            "title":        str(r.get("title", "")),
+            "avg_rating":   r.get("average_rating"),
+            "rating_count": r.get("rating_number", 0),
+            "store":        r.get("store_clean", ""),
+            "price":        r.get("price"),
+        })
+ 
+    if not prod_rev.empty:
+        stats.update({
+            "found":             True,
+            "review_count":      len(prod_rev),
+            "actual_avg_rating": prod_rev["rating"].mean(),
+            "pct_5star":         (prod_rev["rating"] == 5).mean() * 100,
+            "pct_1star":         (prod_rev["rating"] == 1).mean() * 100,
+            "pct_positive":      (prod_rev["rating"] >= 4).mean() * 100,
+            "pct_negative":      (prod_rev["rating"] <= 2).mean() * 100,
+            "verified_pct":      prod_rev["verified_purchase"].mean() * 100,
+            "helpful_votes":     int(prod_rev["helpful_vote"].sum()),
+            "avg_words":         prod_rev["review_length_words"].mean(),
+        })
+ 
+    return stats
+ 
+ 
+# ── Context builder ───────────────────────────────────────────────────────────
+ 
+def _build_recommendation_context(
+    top: pd.DataFrame,
+    user_id: str,
+    reviews: pd.DataFrame,
+    products_lookup: pd.DataFrame,
+) -> str:
+    profile  = _get_user_profile(user_id, reviews, products_lookup)
+    asin_col = next((c for c in top.columns if "asin" in c.lower()), None)
+    lines    = [
+        f"PERSONALISED PRODUCT RECOMMENDATION REPORT — USER: {user_id}",
+        "=" * 60, "",
+    ]
+ 
+    # ── User profile section ──────────────────────────────────────────────────
+    if profile["found"]:
+        lines += [
+            "USER PREFERENCE PROFILE:",
+            f"  Total reviews written       : {profile['total_reviews']}",
+            f"  Average rating they give    : {profile['avg_rating_given']:.2f} ⭐",
+            f"  % 5-star ratings given      : {profile['pct_5star']:.1f}%",
+            f"  % 1-star ratings given      : {profile['pct_1star']:.1f}%",
+            f"  Verified purchase rate      : {profile['verified_pct']:.1f}%",
+            f"  Avg review length (words)   : {profile['avg_words']:.0f}",
+            f"  Products disliked (≤2★)     : {profile['disliked_count']}",
+        ]
+        if profile.get("top_rated"):
+            lines.append("  Products they rated highly  :")
+            for p in profile["top_rated"]:
+                lines.append(f"    {p['rating']}★  {p['title']}")
+    else:
+        lines.append("USER PREFERENCE PROFILE: No review history found for this user.")
+    lines.append("")
+ 
+    # ── Per-product sections ──────────────────────────────────────────────────
+    lines += ["TOP 5 RECOMMENDED PRODUCTS — REVIEW & RATING DATA:", "-" * 60, ""]
+ 
+    matched_any = False
+ 
+    for rank, (_, row) in enumerate(top.iterrows(), start=1):
+        label = str(row.get("DisplayLabel", f"Product {rank}"))
+        sim   = float(row.get("MaxCosine", 0))
+        pred  = float(row.get("Predicted_Rating", 0))
+ 
+        lines.append(f"PRODUCT #{rank}: {label}")
+        lines.append(f"  Cosine Similarity (taste match): {sim:.4f}")
+        lines.append(f"  Predicted Rating  (model)      : {pred:.2f} ⭐")
+ 
+        asin  = _resolve_asin(row, asin_col, products_lookup)
+        stats = _get_product_stats(asin, reviews, products_lookup) if asin else {"found": False}
+ 
+        if stats["found"]:
+            matched_any = True
+            if stats.get("avg_rating") is not None:
+                lines.append(
+                    f"  Catalogue Avg Rating           : {stats['avg_rating']:.2f} ⭐"
+                    f"  ({human_int(stats.get('rating_count', 0))} ratings)"
+                )
+            if stats.get("actual_avg_rating") is not None:
+                actual = stats["actual_avg_rating"]
+                diff   = pred - actual
+                tag    = ("over-estimated" if diff > 0.3
+                          else "under-estimated" if diff < -0.3 else "accurate")
+                lines.append(f"  Actual Avg Rating (reviews)    : {actual:.2f} ⭐  → model is {tag} ({diff:+.2f})")
+            if stats.get("review_count"):
+                lines.append(f"  Number of Reviews              : {human_int(stats['review_count'])}")
+            if stats.get("pct_5star") is not None:
+                lines.append(f"  5★ reviews                     : {stats['pct_5star']:.1f}%")
+            if stats.get("pct_1star") is not None:
+                lines.append(f"  1★ reviews                     : {stats['pct_1star']:.1f}%")
+            if stats.get("pct_positive") is not None:
+                lines.append(f"  Positive (4–5★)                : {stats['pct_positive']:.1f}%")
+            if stats.get("pct_negative") is not None:
+                lines.append(f"  Negative (1–2★)                : {stats['pct_negative']:.1f}%")
+            if stats.get("verified_pct") is not None:
+                lines.append(f"  Verified Purchases             : {stats['verified_pct']:.1f}%")
+            if stats.get("helpful_votes"):
+                lines.append(f"  Total Helpful Votes            : {human_int(stats['helpful_votes'])}")
+            if stats.get("store") and stats["store"] not in ("", "(missing store)"):
+                lines.append(f"  Seller                         : {stats['store']}")
+            if stats.get("price") and pd.notna(stats["price"]) and float(stats["price"]) > 0:
+                lines.append(f"  Price                          : ${float(stats['price']):.2f}")
+        else:
+            lines.append(f"  Review data                    : not found in dataset")
+            lines.append(f"  (only model score available)")
+ 
+        lines.append("")
+ 
+    if not matched_any:
+        lines += [
+            "NOTE: No products could be matched to the reviews dataset.",
+            "The scatter file's DisplayLabel values do not match product titles.",
+            "The LLM should base its analysis on the model scores alone",
+            "and clearly state that actual review data was unavailable.",
+            "",
+        ]
+ 
+    # ── Instructions ─────────────────────────────────────────────────────────
+    lines += [
+        "=" * 60,
+        "YOUR TASK — respond with exactly three sections:",
+        "",
+        "**Insights**",
+        "  One bullet per product covering: actual rating (if available),",
+        "  review volume, positive/negative split, and model accuracy.",
+        "  If no review data: note this and use model score only.",
+        "",
+        "**Interpretation**",
+        "  Based on this user's preference profile, explain which products",
+        "  best match their demonstrated taste. Call out any risky picks.",
+        "",
+        "**Recommendations**",
+        "  Rank #1 to #5 using EXACTLY this markdown format (blank line between each):",
+        "  ",
+        "  **#1 [Product Name]**",
+        "  Why: [one sentence — model score + actual rating + user taste fit]",
+        "  ",
+        "  **#2 [Product Name]**",
+        "  Why: [one sentence]",
+        "  ",
+        "  **#3 [Product Name]**",
+        "  Why: [one sentence]",
+        "  ",
+        "  **#4 [Product Name]**",
+        "  Why: [one sentence]",
+        "  ",
+        "  **#5 [Product Name]**",
+        "  Why: [one sentence]",
+        "  ",
+        "  ---",
+        "  🏆 **Top pick: [Product Name]** — [key reason in one sentence]",
+    ]
+ 
+    return "\n".join(lines)
+ 
+ 
+def _build_system_context(plot_df: pd.DataFrame) -> str:
+    avg_sim = plot_df["MaxCosine"].mean()
+    med_sim = plot_df["MaxCosine"].median()
+    avg_rat = plot_df["Predicted_Rating"].mean()
+    total   = len(plot_df)
+    high_q  = int((plot_df["MaxCosine"] >= 0.6).sum())
+    med_q   = int(((plot_df["MaxCosine"] >= 0.4) & (plot_df["MaxCosine"] < 0.6)).sum())
+    low_q   = int((plot_df["MaxCosine"] < 0.4).sum())
+    near_c  = int((plot_df["Group"] == "Near").sum())
+    far_c   = int((plot_df["Group"] == "Far").sum())
+    return "\n".join([
+        "OVERALL RECOMMENDATION SYSTEM ANALYSIS", "",
+        f"  Total candidate products       : {human_int(total)}",
+        f"  Average cosine similarity      : {avg_sim:.4f}  (median: {med_sim:.4f})",
+        f"  Average predicted rating       : {avg_rat:.2f} ⭐", "",
+        "QUALITY DISTRIBUTION:",
+        f"  High quality  (≥0.6 similarity): {high_q} ({high_q/total*100:.1f}%)",
+        f"  Medium quality (0.4–0.6)       : {med_q} ({med_q/total*100:.1f}%)",
+        f"  Low quality   (<0.4 similarity): {low_q} ({low_q/total*100:.1f}%)", "",
+        "CLUSTER COUNTS:",
+        f"  Near matches  : {near_c}",
+        f"  Far mismatches: {far_c}",
+        f"  Random/other  : {total - near_c - far_c}",
+    ])
+ 
+ 
 # ── Tab entry point ───────────────────────────────────────────────────────────
  
-def show_scatter_tab() -> None:
+def show_scatter_tab(
+    reviews: pd.DataFrame,
+    products_lookup: pd.DataFrame,
+) -> None:
     st.header("Product Recommendation Scatter Plot")
  
     df: Optional[pd.DataFrame] = load_scatter()
- 
     if df is None:
-        st.warning(f"Scatter data not found at `{SCATTER_FILE}`. Please place the Excel file in the data folder.")
+        st.warning(f"Scatter data not found at `{SCATTER_FILE}`.")
         return
  
-    user_id = st.text_input("Search by User ID", placeholder="Enter User ID…")
+    # Debug expander — shows what columns the scatter file has
+    with st.expander("🔍 Scatter file columns (debug)", expanded=False):
+        st.write(list(df.columns))
+        st.caption(
+            "If you see an ASIN/product ID column above, make sure it contains "
+            "the word 'asin' (case-insensitive) so it is picked up automatically. "
+            "Otherwise title-matching is used as a fallback."
+        )
  
+    user_id = st.text_input("Search by User ID", placeholder="Enter User ID…")
     if not user_id.strip():
         st.info("Enter a User ID to view personalised recommendations.")
         return
  
     plot_df = df[df["User_ID"].astype(str) == user_id.strip()].copy()
- 
     if plot_df.empty:
         st.warning(f"No data found for user **{user_id}**.")
         return
@@ -104,250 +374,34 @@ def show_scatter_tab() -> None:
         st.dataframe(
             top[["DisplayLabel", "MaxCosine", "Predicted_Rating"]]
             .rename(columns={
-                "DisplayLabel":    "Product",
-                "MaxCosine":       "Cosine Similarity",
+                "DisplayLabel":     "Product",
+                "MaxCosine":        "Cosine Similarity",
                 "Predicted_Rating": "Predicted Rating",
             })
             .assign(**{
                 "Cosine Similarity": lambda d: d["Cosine Similarity"].round(3),
                 "Predicted Rating":  lambda d: d["Predicted Rating"].round(2),
             }),
-            use_container_width=True,
-            hide_index=True,
-            height=220,
+            use_container_width=True, hide_index=True, height=220,
         )
-        
-        # ── Dynamic Top Recommendation Insights ───────────────────────────────
-        best = top.iloc[0]
-        worst_in_top5 = top.iloc[-1]
-        
-        # Calculate quality metrics
-        avg_similarity_top5 = top["MaxCosine"].mean()
-        avg_rating_top5 = top["Predicted_Rating"].mean()
-        
-        # Calculate score spread
-        similarity_range = top["MaxCosine"].max() - top["MaxCosine"].min()
-        rating_range = top["Predicted_Rating"].max() - top["Predicted_Rating"].min()
-        
-        # Quality assessment
-        if best["MaxCosine"] >= 0.8:
-            similarity_quality = "excellent"
-        elif best["MaxCosine"] >= 0.6:
-            similarity_quality = "strong"
-        elif best["MaxCosine"] >= 0.4:
-            similarity_quality = "moderate"
-        else:
-            similarity_quality = "weak"
-        
-        if best["Predicted_Rating"] >= 4.5:
-            rating_quality = "excellent"
-        elif best["Predicted_Rating"] >= 4.0:
-            rating_quality = "strong"
-        elif best["Predicted_Rating"] >= 3.5:
-            rating_quality = "moderate"
-        else:
-            rating_quality = "poor"
-        
-        insights = [
-            f"**#1 Recommendation:** {best['DisplayLabel']}",
-            f"**Cosine Similarity:** {best['MaxCosine']:.3f} ({similarity_quality})",
-            f"**Predicted Rating:** {best['Predicted_Rating']:.2f}⭐ ({rating_quality})",
-            f"**Top 5 Average Similarity:** {avg_similarity_top5:.3f}",
-            f"**Top 5 Average Predicted Rating:** {avg_rating_top5:.2f}⭐"
-        ]
-        
-        if similarity_range > 0.2:
-            insights.append(f"**Quality Variation:** Wide spread ({similarity_range:.2f}) between #1 and #5")
-        
-        interpretations = []
-        
-        # Overall quality assessment
-        if best["MaxCosine"] >= 0.7 and best["Predicted_Rating"] >= 4.0:
-            interpretations.append("**Excellent match** - High similarity AND high predicted satisfaction")
-            interpretations.append("Strong confidence in recommendation quality")
-        elif best["MaxCosine"] >= 0.5 and best["Predicted_Rating"] >= 3.5:
-            interpretations.append("**Good match** - Reasonable similarity with acceptable predicted rating")
-        elif best["MaxCosine"] < 0.4 or best["Predicted_Rating"] < 3.0:
-            interpretations.append(" **Weak match** - Low confidence in recommendation quality")
-            interpretations.append("Model may need more user data or feature tuning")
-        
-        # Consistency check
-        if similarity_range < 0.15 and rating_range < 0.5:
-            interpretations.append("**Consistent recommendations** - All top 5 are similarly strong")
-        elif similarity_range > 0.3 or rating_range > 1.0:
-            interpretations.append("**Variable quality** - Significant gap between best and worst recommendations")
-        
-        # Balance check
-        if best["MaxCosine"] >= 0.7 and best["Predicted_Rating"] < 3.5:
-            interpretations.append(" **Similarity-rating mismatch** - High similarity but low predicted enjoyment")
-        elif best["MaxCosine"] < 0.5 and best["Predicted_Rating"] >= 4.0:
-            interpretations.append(" **Interesting pattern** - Lower similarity but high predicted rating (diverse taste)")
-        
-        recommendations = []
-        
-        # Primary recommendation action
-        if best["MaxCosine"] >= 0.6 and best["Predicted_Rating"] >= 4.0:
-            recommendations.append(f" **Display prominently:** Show '{best['DisplayLabel']}' as primary suggestion")
-            recommendations.append(" **High confidence message:** Use phrases like 'Perfect match for you'")
-        elif best["MaxCosine"] >= 0.4:
-            recommendations.append(f" **Soft recommendation:** Present '{best['DisplayLabel']}' with 'You might like this'")
-        else:
-            recommendations.append(" **Explore alternatives:** Current top match is weak - consider showing popular items instead")
-        
-        # Top 5 strategy
-        if avg_similarity_top5 >= 0.6:
-            recommendations.append(" **Show all 5:** Strong overall quality - display full recommendation set")
-        elif avg_similarity_top5 >= 0.4:
-            recommendations.append(" **Show top 3:** Focus on highest-quality recommendations only")
-        else:
-            recommendations.append(" **Limit display:** Show only #1 or switch to popularity-based recommendations")
-        
-        # Model improvement
-        if best["MaxCosine"] < 0.5:
-            recommendations.append(" **Improve model:** Collect more user preference data or add features")
-            recommendations.append(" **Feature engineering:** Enhance similarity calculation with additional signals")
-        
-        if worst_in_top5["Predicted_Rating"] < 3.0:
-            recommendations.append(" **Filter threshold:** Exclude recommendations below 3.0 rating prediction")
-        
-        # Testing and optimization
-        recommendations.append(" **A/B test:** Track click-through and conversion rates for these recommendations")
-        recommendations.append(" **Feedback loop:** Collect user reactions to improve future predictions")
-        
-        if similarity_range > 0.3:
-            recommendations.append(" **Quality control:** Consider setting minimum similarity threshold (e.g., 0.5)")
-
-        st.markdown(f"""
-**Insights**
-{chr(10).join(f"- {i}" for i in insights)}
-
-**Interpretation**
-{chr(10).join(f"- {i}" for i in interpretations)}
-
-**Recommendations**
-{chr(10).join(f"- {r}" for r in recommendations)}
-        """)
  
+    # ── Scatter plot ──────────────────────────────────────────────────────────
     st.markdown("<br>", unsafe_allow_html=True)
     st.plotly_chart(_build_scatter(plot_df), use_container_width=True)
-    
-    # ── Dynamic Overall System Insights ───────────────────────────────────────
-    avg_similarity = plot_df["MaxCosine"].mean()
-    median_similarity = plot_df["MaxCosine"].median()
-    avg_rating = plot_df["Predicted_Rating"].mean()
-    median_rating = plot_df["Predicted_Rating"].median()
-    
-    # Calculate distribution
-    high_quality = (plot_df["MaxCosine"] >= 0.6).sum()
-    medium_quality = ((plot_df["MaxCosine"] >= 0.4) & (plot_df["MaxCosine"] < 0.6)).sum()
-    low_quality = (plot_df["MaxCosine"] < 0.4).sum()
-    total_recommendations = len(plot_df)
-    
-    high_quality_pct = (high_quality / total_recommendations * 100) if total_recommendations > 0 else 0
-    low_quality_pct = (low_quality / total_recommendations * 100) if total_recommendations > 0 else 0
-    
-    # Near/Far analysis
-    near_count = len(plot_df[plot_df["Group"] == "Near"])
-    far_count = len(plot_df[plot_df["Group"] == "Far"])
-    
-    # System performance level
-    if avg_similarity >= 0.6:
-        system_performance = "excellent"
-       
-    elif avg_similarity >= 0.5:
-        system_performance = "strong"
-     
-    elif avg_similarity >= 0.4:
-        system_performance = "moderate"
-  
-    else:
-        system_performance = "weak"
-        
-    
-    insights = [
-        f"**Average Similarity:** {avg_similarity:.3f} (Median: {median_similarity:.3f})",
-        f"**Average Predicted Rating:** {avg_rating:.2f}⭐ (Median: {median_rating:.2f})",
-        f"**Total Candidate Products:** {human_int(total_recommendations)}",
-        f"**High Quality (≥0.6):** {high_quality} ({high_quality_pct:.1f}%)",
-        f"**Medium Quality (0.4-0.6):** {medium_quality}",
-        f"**Low Quality (<0.4):** {low_quality} ({low_quality_pct:.1f}%)"
-    ]
-    
-    if near_count > 0 or far_count > 0:
-        insights.append(f"**Clustering:** {near_count} near matches, {far_count} far mismatches")
-    
-    interpretations = []
-    
-    # Overall system assessment
-    if avg_similarity >= 0.6:
-        interpretations.append(f"**{system_performance.capitalize()} recommendation engine** - System is performing very well")
-        interpretations.append("Strong personalization signals detected")
-    elif avg_similarity >= 0.5:
-        interpretations.append(f"**{system_performance.capitalize()} performance**  - System is working adequately")
-        interpretations.append("Decent personalization with room for improvement")
-    elif avg_similarity >= 0.4:
-        interpretations.append(f"**{system_performance.capitalize()} performance**  - System needs optimization")
-        interpretations.append("Weak personalization signals - recommendations may not match user preferences well")
-    else:
-        interpretations.append(f"**{system_performance.capitalize()} performance**  - Critical issues detected")
-        interpretations.append("Very poor personalization - system may not have enough data or features")
-    
-    # Quality distribution
-    if high_quality_pct >= 40:
-        interpretations.append(f"**Rich candidate pool** - {high_quality_pct:.0f}% of products are strong matches")
-    elif high_quality_pct < 20:
-        interpretations.append(f" **Limited matches** - Only {high_quality_pct:.0f}% of products are strong candidates")
-    
-    if low_quality_pct > 50:
-        interpretations.append(" **Poor filtering** - Majority of candidates are low quality")
-    
-    # Rating vs similarity check
-    if avg_rating >= 4.0 and avg_similarity < 0.5:
-        interpretations.append(" **Interesting pattern** - High predicted ratings despite low similarity (possibly popular items)")
-    elif avg_rating < 3.5 and avg_similarity >= 0.6:
-        interpretations.append(" **Quality concern** - High similarity but low predicted ratings")
-    
-    recommendations = []
-    
-    # System-level actions
-    if avg_similarity < 0.5:
-        recommendations.append(" **Model retraining needed** - Current algorithm is underperforming")
-        recommendations.append(" **Feature enhancement** - Add more user/product features to improve matching")
-        recommendations.append(" **Data collection** - Gather more user interaction data for better personalization")
-    elif avg_similarity < 0.6:
-        recommendations.append(" **Optimization opportunity** - System is adequate but can be improved")
-        recommendations.append(" **A/B test features** - Experiment with additional signals")
-    else:
-        recommendations.append(f" **Maintain quality** - System is performing well, continue monitoring")
-    
-    # Filtering recommendations
-    if low_quality_pct > 40:
-        recommendations.append(" **Implement thresholds** - Filter out recommendations below 0.4 similarity")
-        recommendations.append(" **Focus on quality** - Show only top-tier matches to users")
-    
-    if high_quality_pct >= 30:
-        recommendations.append(" **Leverage strong matches** - Prioritize displaying high-quality recommendations")
-    else:
-        recommendations.append(" **Expand catalog relevance** - Limited strong matches suggests narrow product range")
-    
-    # User experience
-    recommendations.append(" **UI strategy:** " + (
-        "Use confidence indicators when showing recommendations" if avg_similarity >= 0.5 
-        else "Consider hybrid approach (personalized + popular items)"
-    ))
-    
-    recommendations.append(" **Continuous improvement:** Monitor recommendation acceptance rates and adjust model")
-    
-    if near_count > 0:
-        recommendations.append(f" **Validate clusters:** {near_count} products flagged as 'near' matches - investigate patterns")
-
-    st.markdown(f"""
-**Overall System Insights** 
-{chr(10).join(f"- {i}" for i in insights)}
-
-**Interpretation**
-{chr(10).join(f"- {i}" for i in interpretations)}
-
-**Recommendations**
-{chr(10).join(f"- {r}" for r in recommendations)}
-    """)
+ 
+    # ── LLM blocks BELOW chart ────────────────────────────────────────────────
+    if not top.empty:
+        show_llm_insights(
+            context   = _build_recommendation_context(
+                top, user_id.strip(), reviews, products_lookup),
+            cache_key = f"scatter_top5_{user_id}",
+            title     = "Top 5 Recommendations & User Preference Analysis",
+            user_id   = user_id.strip(),
+        )
+ 
+    show_llm_insights(
+        context   = _build_system_context(plot_df),
+        cache_key = f"scatter_system_{user_id}",
+        title     = "Recommendation System Analysis",
+        user_id   = user_id.strip(),
+    )

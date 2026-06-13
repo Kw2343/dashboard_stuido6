@@ -27,10 +27,10 @@ from tabs.scatter             import show_scatter_tab
 from tabs.bought_together     import show_bought_together_tab
 from tabs.popularity          import show_popularity_tab
 from tabs.feature_engineering import show_feature_tab
+from tabs.recommender         import show_recommender_tab
  
  
 def _load_css(path: str) -> None:
-    """Load CSS using absolute path resolved relative to this file."""
     css_path = Path(__file__).resolve().parent / path
     try:
         css_content = css_path.read_text()
@@ -159,9 +159,11 @@ c6.metric("Helpful vote > 0",  pct((filtered["helpful_vote"] > 0).mean()))
 (
     tab_overview, tab_products, tab_users,
     tab_scatter, tab_bought, tab_popularity, tab_features,
+    tab_recommender,
 ) = st.tabs([
     "Overview", "Products", "Users",
     "Scatter Plot", "Bought Together", "Popularity", "Feature Engineering",
+    "Compare Models",
 ])
  
 with tab_overview:
@@ -171,10 +173,12 @@ with tab_products:
 with tab_users:
     show_users_tab(filtered, users)
 with tab_scatter:
-    show_scatter_tab()
+    show_scatter_tab(reviews=reviews, products_lookup=products_lookup)
 with tab_bought:
     show_bought_together_tab(products_lookup)
 with tab_popularity:
     show_popularity_tab(products)
 with tab_features:
     show_feature_tab(reviews, products, features_df)
+with tab_recommender:
+    show_recommender_tab()
