@@ -38,8 +38,22 @@ from scipy import stats
 # ── Paths ─────────────────────────────────────────────────────────────────────
 _DATA_DIR      = Path(r"C:\Users\kelvi\Downloads\dashboard - Copy (2) - Copy\dashboard\dashboard_data")
 _CBF_CSV       = _DATA_DIR / "cbf_dashboard.csv"
-_POPULAR_CSV   = _DATA_DIR / "popular_products_top100.csv"
-_DISCOVERY_CSV = _DATA_DIR / "discovery_products_top100.csv"
+_BLENDED_CSV   = _DATA_DIR / "blended_products_top100.csv"
+
+
+def _split_blended(blended: pd.DataFrame | None) -> tuple[pd.DataFrame | None, pd.DataFrame | None]:
+    """
+    Split the single blended_products_top100.csv (produced by
+    build_popularity_lists.py) back into popular / discovery DataFrames
+    using its `rec_type` column ("Popular" / "Discovery"), so the rest of
+    this module — which still expects two separate frames — needs no
+    other changes.
+    """
+    if blended is None or "rec_type" not in blended.columns:
+        return blended, None
+    popular   = blended[blended["rec_type"] == "Popular"].copy()
+    discovery = blended[blended["rec_type"] == "Discovery"].copy()
+    return popular, discovery
  
 # ── Constants ─────────────────────────────────────────────────────────────────
 MIN_REVIEWS_FOR_TEST = 5
@@ -93,7 +107,9 @@ def _chronological_split(user_reviews: pd.DataFrame) -> tuple[pd.DataFrame, pd.D
 def _popular_scored(products: pd.DataFrame) -> pd.DataFrame:
     df = products.copy()
     for col in ["rating_number", "average_rating", "purchase_frequency"]:
-        df[col] = pd.to_numeric(df.get(col, 0), errors="coerce").fillna(0)
+        if col not in df.columns:
+            df[col] = 0
+        df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
     df["popular_score"] = (
         0.50 * _norm(df["purchase_frequency"])
       + 0.30 * _norm(df["average_rating"])
@@ -504,9 +520,16 @@ def show_ab_testing_tab(
     reviews:        pd.DataFrame,
     products:       pd.DataFrame,
     cbf_df:         pd.DataFrame | None = None,
+    blended_file:   pd.DataFrame | None = None,
     popular_file:   pd.DataFrame | None = None,
     discovery_file: pd.DataFrame | None = None,
 ) -> None:
+    # Prefer the new single blended_products_top100.csv (split by rec_type).
+    # Falls back to legacy popular_file/discovery_file args if a caller still
+    # passes those directly, so app.py doesn't have to change in lockstep.
+    if blended_file is not None:
+        popular_file, discovery_file = _split_blended(blended_file)
+
     st.header("🧪 Model Evaluation — Popularity Baseline vs Content-Based Filtering")
     st.caption(
         "Every eligible customer is evaluated against both models simultaneously — "
@@ -709,12 +732,14 @@ if __name__ == "__main__":
         if c in cbf_df.columns: cbf_df[c] = pd.to_numeric(cbf_df[c], errors="coerce")
     print(f"  {len(cbf_df):,} rows | {cbf_df['user_id'].nunique():,} users")
  
-    popular_file   = pd.read_csv(_POPULAR_CSV)   if _POPULAR_CSV.exists()   else None
-    discovery_file = pd.read_csv(_DISCOVERY_CSV) if _DISCOVERY_CSV.exists() else None
-    if popular_file   is not None: print(f"[LOAD]  popular_products_top100.csv   ({len(popular_file):,} rows)")
-    else:                          print("[WARN]  popular_products_top100.csv not found")
-    if discovery_file is not None: print(f"[LOAD]  discovery_products_top100.csv ({len(discovery_file):,} rows)")
-    else:                          print("[WARN]  discovery_products_top100.csv not found")
+    blended_file   = pd.read_csv(_BLENDED_CSV) if _BLENDED_CSV.exists() else None
+    popular_file, discovery_file = _split_blended(blended_file)
+    if blended_file is not None:
+        print(f"[LOAD]  blended_products_top100.csv   ({len(blended_file):,} rows: "
+              f"{len(popular_file) if popular_file is not None else 0} popular + "
+              f"{len(discovery_file) if discovery_file is not None else 0} discovery)")
+    else:
+        print("[WARN]  blended_products_top100.csv not found")
  
     print(f"\n[RUN]   Mode 1: Top-{DEFAULT_TOP_N_FAIR} vs Top-{DEFAULT_TOP_N_FAIR} (fair)")
     print(f"[RUN]   Mode 2: Popularity Top-{DEFAULT_TOP_N_A_BIZ} vs CBF Top-{DEFAULT_TOP_N_B_BIZ} (business)")

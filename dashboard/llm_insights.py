@@ -25,7 +25,6 @@ All calls go through guardrails.py before and after the LLM call:
  
   Pre-call:
     • Kill-switch (AI_INSIGHTS_ENABLED secret/env var)
-    • Per-session rate limiting (30 calls / hour)
     • Prompt-injection detection in context
     • PII scrubbing (e-mail, phone, API keys, IPs)
     • Data-leakage check (no raw review text / credentials)

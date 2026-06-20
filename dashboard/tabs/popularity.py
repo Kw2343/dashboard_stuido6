@@ -287,7 +287,7 @@ def show_popularity_tab(products: pd.DataFrame) -> None:
     max_pop = len(_compute_popular_score(products))
     pop_table_n = st.slider(
         "Number of popular products to show",
-        10, min(500, max_pop), min(100, max_pop),
+        1, 100, 100,
         key="pop_table_n",
     )
     pop_full = _compute_popular_score(products).nlargest(pop_table_n, "popular_score")
@@ -306,52 +306,72 @@ def show_popularity_tab(products: pd.DataFrame) -> None:
  
     st.divider()
  
-    # ── Full-width Discovery table ────────────────────────────────────────────
-    st.subheader(" Discovery (Less Popular) Products Table")
-    st.caption(
-        "Under-exposed products with good customer signals — qualified by minimum rating and review count. "
-        "Use the slider to control how many to show and export — independent of the recommendation K above."
+    # ── Blended Recommendation List (from pre-computed file) ──────────────────
+    _BLENDED_FILE = Path(
+        r"C:\Users\kelvi\Downloads\dashboard - Copy (2) - Copy"
+        r"\dashboard\dashboard_data\blended_products_top100.csv"
     )
  
-    # Compute full discovery pool (not capped by discovery_k)
-    disc_full_df = _compute_discovery_score(products)
-    pop_ids_full = set(_compute_popular_score(products).nlargest(popular_k, "popular_score").index)
-    disc_pool = disc_full_df[
-        (~disc_full_df.index.isin(pop_ids_full)) &
-        (disc_full_df["average_rating"] >= min_disc_rating) &
-        (disc_full_df["rating_number"]  >= min_disc_reviews)
-    ].sort_values("discovery_score", ascending=False)
+    st.subheader("\U0001f4cb Blended Recommendation List")
+    st.caption(
+        "Popular + Discovery products pre-computed and ranked. "
+        "Use the slider to control how many to show — up to 100."
+    )
  
-    if disc_pool.empty:
-        st.warning("No discovery products qualified. Lower the minimum rating or reviews threshold to see results.")
+    if not _BLENDED_FILE.exists():
+        st.warning(
+            f"\u26a0\ufe0f Pre-computed blended file not found at `{_BLENDED_FILE}`.  \n"
+            "Export it from the Popular Products table above, "
+            "or generate it via the popularity scoring script."
+        )
     else:
-        disc_table_n = st.slider(
-            "Number of discovery products to show",
-            10, min(500, len(disc_pool)), min(100, len(disc_pool)),
-            key="disc_table_n",
+        blended_file_df = pd.read_csv(_BLENDED_FILE)
+ 
+        # ── Enrich with titles from the products DataFrame ────────────────────
+        if "parent_asin" in products.columns and "title" in products.columns:
+            title_map = products.set_index("parent_asin")["title"].to_dict()
+            blended_file_df["title"] = blended_file_df["parent_asin"].map(title_map).fillna("")
+ 
+        blended_n = st.slider(
+            "Number of blended products to show",
+            1, min(100, len(blended_file_df)), min(20, len(blended_file_df)),
+            key="blended_file_n",
         )
-        disc_show = disc_pool.head(disc_table_n)
-        disc_table_cols = [c for c in [
-            "parent_asin", "title", "average_rating", "rating_number",
-            "purchase_frequency", "discovery_score", "_low_exposure",
-        ] if c in disc_show.columns]
-        disc_display = disc_show[disc_table_cols].rename(
-            columns={"_low_exposure": "low_exposure_score"}
-        ).reset_index(drop=True)
-        st.dataframe(disc_display, use_container_width=True, hide_index=True)
+ 
+        blended_show = blended_file_df.head(blended_n).copy()
+ 
+        # Show all columns from the file, with title inserted after parent_asin
+        all_cols = list(blended_show.columns)
+        if "title" in all_cols and "parent_asin" in all_cols:
+            all_cols.remove("title")
+            asin_pos = all_cols.index("parent_asin") + 1
+            all_cols.insert(asin_pos, "title")
+        blended_show = blended_show[all_cols]
+ 
+        def _highlight_tier(row):
+            tier = str(row.get("tier", row.get("rec_type", ""))).strip().lower()
+            if tier in ("discovery", "tail"):
+                return ["background-color: #fff7e6"] * len(row)
+            return [""] * len(row)
+ 
+        tier_col = next((c for c in ["tier", "rec_type"] if c in blended_show.columns), None)
+        if tier_col:
+            st.dataframe(
+                blended_show.style.apply(_highlight_tier, axis=1),
+                use_container_width=True,
+                hide_index=True,
+            )
+        else:
+            st.dataframe(blended_show.reset_index(drop=True),
+                         use_container_width=True, hide_index=True)
+ 
         st.download_button(
-            label=f"⬇ Download {disc_table_n} Discovery Products as CSV",
-            data=disc_display.to_csv(index=False).encode("utf-8"),
-            file_name=f"discovery_products_top{disc_table_n}.csv",
+            label=f"\u2b07 Download Top {blended_n} Blended Products as CSV",
+            data=blended_show.to_csv(index=False).encode("utf-8"),
+            file_name=f"blended_products_top{blended_n}.csv",
             mime="text/csv",
-            key="dl_discovery_table",
+            key="dl_blended_file",
         )
- 
-    st.divider()
- 
-    # ── Unified blended list ──────────────────────────────────────────────────
-    _render_blended_table(top_popular, top_discovery, k)
- 
     st.divider()
  
     # ── LLM insights ─────────────────────────────────────────────────────────
