@@ -195,8 +195,31 @@ def _split_like_cbf(reviews: pd.DataFrame, user_col: str, cbf) -> tuple[pd.DataF
     test_df = work.loc[test_mask].drop(columns="_source_order").reset_index(drop=True)
     _log(f"Split complete: train={len(train_df):,}, test={len(test_df):,}")
     return train_df, test_df
- 
- 
+
+
+def _filter_test_to_training_items(
+    train_df: pd.DataFrame,
+    test_df: pd.DataFrame,
+    user_col: str,
+    item_col: str,
+) -> pd.DataFrame:
+    """Remove held-out products that were never present in the training catalog."""
+    train_items = set(train_df[item_col].dropna().astype(str))
+    test_items = test_df[item_col].astype(str)
+    keep_mask = test_items.isin(train_items)
+    filtered = test_df.loc[keep_mask].copy()
+
+    removed_rows = int((~keep_mask).sum())
+    users_before = int(test_df[user_col].nunique())
+    users_after = int(filtered[user_col].nunique())
+    _log(
+        "Training-catalog filter: "
+        f"removed {removed_rows:,} held-out rows and "
+        f"{users_before - users_after:,} users with no remaining test item"
+    )
+    return filtered
+
+
 def _build_ground_truth(test_df: pd.DataFrame, user_col: str, item_col: str) -> dict[str, set[str]]:
     if test_df.empty:
         return {}
@@ -470,20 +493,35 @@ def _intra_list_diversity(recs: list[str], item_vectors: dict[str, np.ndarray]) 
  
 def _load_recommendations_csv(path: Path) -> dict[str, list[str]]:
     df = pd.read_csv(path, low_memory=False)
-    required = {"user_id", "parent_asin"}
-    missing = required - set(df.columns)
-    if missing:
-        raise ValueError(f"Recommendations CSV is missing columns: {sorted(missing)}")
- 
+    df.columns = [str(column).strip() for column in df.columns]
+    if "user_id" not in df.columns:
+        raise ValueError("Recommendations CSV is missing column: user_id")
+
+    item_col = next(
+        (
+            candidate
+            for candidate in ["recommended_asin", "parent_asin", "neighbour_item"]
+            if candidate in df.columns
+        ),
+        None,
+    )
+    if item_col is None:
+        raise ValueError(
+            "Recommendations CSV must contain one of: "
+            "recommended_asin, parent_asin, neighbour_item"
+        )
+
     df["user_id"] = df["user_id"].astype(str).str.strip()
-    df["parent_asin"] = df["parent_asin"].astype(str).str.strip()
- 
+    df[item_col] = df[item_col].astype(str).str.strip()
+
     if "rank" in df.columns:
+        df["rank"] = pd.to_numeric(df["rank"], errors="coerce")
         df = df.sort_values(["user_id", "rank"], ascending=[True, True])
     elif "predicted_score" in df.columns:
         df = df.sort_values(["user_id", "predicted_score"], ascending=[True, False])
- 
-    return df.groupby("user_id")["parent_asin"].apply(lambda s: list(s.astype(str))).to_dict()
+
+    df = df.drop_duplicates(subset=["user_id", item_col], keep="first")
+    return df.groupby("user_id")[item_col].apply(lambda s: list(s.astype(str))).to_dict()
  
  
 def _average_precision_at_k(rels: list[int], top_k: int, n_relevant: int) -> float:
@@ -616,9 +654,8 @@ def _build_catalog_items(
     return sorted(fallback_items or [])
  
  
-def _save_outputs(result: EvalResult, detail_df: pd.DataFrame, output_dir: Path) -> None:
-    output_dir.mkdir(parents=True, exist_ok=True)
-    summary_df = pd.DataFrame([{
+def _result_row(result: EvalResult) -> dict[str, object]:
+    return {
         "model": result.model,
         "top_k": result.top_k,
         "users_evaluated": result.users_evaluated,
@@ -631,16 +668,44 @@ def _save_outputs(result: EvalResult, detail_df: pd.DataFrame, output_dir: Path)
         "intra_list_diversity_at_k": round(result.intra_list_diversity_at_k, 6),
         "popularity_bias_at_k": round(result.popularity_bias_at_k, 6),
         "coverage_at_k": round(result.coverage_at_k, 6),
-    }])
- 
-    summary_path = output_dir / f"{result.model.lower().replace(' ', '_')}_metrics.csv"
-    detail_path = output_dir / f"{result.model.lower().replace(' ', '_')}_user_details.csv"
+    }
+
+
+def _safe_model_name(model_name: str) -> str:
+    return model_name.lower().replace(" ", "_").replace("-", "_")
+
+
+def _save_outputs(result: EvalResult, detail_df: pd.DataFrame, output_dir: Path) -> None:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    summary_df = pd.DataFrame([_result_row(result)])
+
+    safe_name = _safe_model_name(result.model)
+    summary_path = output_dir / f"{safe_name}_metrics.csv"
+    detail_path = output_dir / f"{safe_name}_user_details.csv"
  
     summary_df.to_csv(summary_path, index=False)
     detail_df.to_csv(detail_path, index=False)
  
     print(f"[SAVE] Summary -> {summary_path}")
     print(f"[SAVE] Detail   -> {detail_path}")
+
+
+def _save_comparison_outputs(
+    results: list[EvalResult],
+    details: dict[str, pd.DataFrame],
+    output_dir: Path,
+) -> None:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    metrics_path = output_dir / "model_comparison_metrics.csv"
+    pd.DataFrame([_result_row(result) for result in results]).to_csv(
+        metrics_path, index=False
+    )
+    print(f"[SAVE] Combined metrics -> {metrics_path}")
+
+    for model_name, detail_df in details.items():
+        detail_path = output_dir / f"{_safe_model_name(model_name)}_user_details.csv"
+        detail_df.to_csv(detail_path, index=False)
+        print(f"[SAVE] Detail           -> {detail_path}")
  
  
 def _print_result(result: EvalResult) -> None:
@@ -695,7 +760,16 @@ def main() -> int:
     parser.add_argument("--products", type=Path, default=DEFAULT_PRODUCTS, help="Products CSV file used for coverage denominator when available.")
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR, help="Directory for evaluation outputs.")
     parser.add_argument("--model", choices=sorted(MODEL_REGISTRY.keys()), default="popularity", help="Built-in model to evaluate.")
-    parser.add_argument("--recommendations-csv", type=Path, default=None, help="Optional per-user recommendations CSV with columns user_id,parent_asin.")
+    parser.add_argument(
+        "--recommendations-csv",
+        type=Path,
+        default=None,
+        help=(
+            "Optional content-based recommendations CSV. It must contain user_id, "
+            "an item column such as recommended_asin, and optionally rank. When "
+            "provided, the evaluator compares it with the popularity baseline."
+        ),
+    )
     parser.add_argument("--top-k", type=int, default=10, help="Cutoff for ranking metrics.")
     parser.add_argument("--discovery-share", type=float, default=0.20, help="Share of popularity.py recommendations reserved for discovery products.")
     parser.add_argument("--min-discovery-rating", type=float, default=3.5, help="Minimum average rating used by popularity.py's discovery gate.")
@@ -703,12 +777,11 @@ def main() -> int:
     parser.add_argument(
         "--blended-csv",
         type=Path,
-        default=Path(r"C:\Users\kelvi\Downloads\dashboard - Copy (2) - Copy\dashboard\dashboard_data\blended_products_top100.csv"),
+        default=None,
         help=(
-            "Pre-built blended popularity CSV from build_popularity_lists.py ",
-            "(blended_products_top100.csv). When this file exists the popularity ",
-            "model reads rankings directly from it instead of recomputing live. ",
-            "Pass --blended-csv none to force live recomputation.",
+            "Optional pre-built blended popularity CSV from "
+            "build_popularity_lists.py. By default, the evaluator computes the "
+            "Top-K popularity/discovery blend from the training split."
         ),
     )
     args = parser.parse_args()
@@ -770,50 +843,64 @@ def main() -> int:
         fallback_items=cached_catalog,
     )
     products = _load_products(args.products)
-    ground_truth = _build_ground_truth(test_df, user_col, item_col)
- 
+    filtered_test_df = _filter_test_to_training_items(
+        train_df, test_df, user_col, item_col
+    )
+    ground_truth = _build_ground_truth(filtered_test_df, user_col, item_col)
+
+    builder = MODEL_REGISTRY[args.model]
+    _log(f"Building recommendations with model={args.model}")
+    popularity_recs = builder(
+        train_df=train_df,
+        user_col=user_col,
+        item_col=item_col,
+        catalog_items=catalog_items,
+        top_k=args.top_k,
+        user_ids=sorted(ground_truth),
+        discovery_share=args.discovery_share,
+        min_discovery_rating=args.min_discovery_rating,
+        min_discovery_reviews=args.min_discovery_reviews,
+        blended_csv=getattr(args, "blended_csv", None),
+    )
+    recommendations_by_model = {"popularity": popularity_recs}
+
     if args.recommendations_csv is not None:
-        _log(f"Loading recommendations from {args.recommendations_csv}")
-        recs_by_user = _load_recommendations_csv(args.recommendations_csv)
-        model_name = args.recommendations_csv.stem
-    else:
-        builder = MODEL_REGISTRY[args.model]
-        _log(f"Building recommendations with model={args.model}")
-        recs_by_user = builder(
-            train_df=train_df,
-            user_col=user_col,
-            item_col=item_col,
-            catalog_items=catalog_items,
-            top_k=args.top_k,
-            user_ids=sorted(ground_truth),
-            discovery_share=args.discovery_share,
-            min_discovery_rating=args.min_discovery_rating,
-            min_discovery_reviews=args.min_discovery_reviews,
-            blended_csv=getattr(args, "blended_csv", None),
+        _log(f"Loading content-based recommendations from {args.recommendations_csv}")
+        recommendations_by_model["content-based"] = _load_recommendations_csv(
+            args.recommendations_csv
         )
-        model_name = args.model
- 
-    # Embedding diversity only needs vectors for products that were recommended.
+
+    # Embedding diversity only needs vectors for products recommended by either model.
     recommended_items = sorted({
         item
-        for user_recs in recs_by_user.values()
+        for recs_by_user in recommendations_by_model.values()
+        for user_id in ground_truth
+        for user_recs in [recs_by_user.get(user_id, [])]
         for item in user_recs[:args.top_k]
     })
     item_vectors = _build_item_embeddings(products, recommended_items, args.products)
     popularity_lookup = _build_popularity_lookup(train_df, item_col, catalog_items)
- 
-    result, detail_df = evaluate_rankings(
-        recs_by_user=recs_by_user,
-        ground_truth=ground_truth,
-        catalog_items=catalog_items,
-        top_k=args.top_k,
-        model_name=model_name,
-        item_vectors=item_vectors,
-        popularity_lookup=popularity_lookup,
-    )
- 
-    _print_result(result)
-    _save_outputs(result, detail_df, args.output_dir)
+
+    results = []
+    details = {}
+    for model_name, recs_by_user in recommendations_by_model.items():
+        result, detail_df = evaluate_rankings(
+            recs_by_user=recs_by_user,
+            ground_truth=ground_truth,
+            catalog_items=catalog_items,
+            top_k=args.top_k,
+            model_name=model_name,
+            item_vectors=item_vectors,
+            popularity_lookup=popularity_lookup,
+        )
+        results.append(result)
+        details[model_name] = detail_df
+        _print_result(result)
+
+    if len(results) > 1:
+        _save_comparison_outputs(results, details, args.output_dir)
+    else:
+        _save_outputs(results[0], details[results[0].model], args.output_dir)
     _log(f"Done in {time.perf_counter() - start:.1f}s")
     return 0
  
