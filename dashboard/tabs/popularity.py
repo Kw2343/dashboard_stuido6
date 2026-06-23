@@ -312,7 +312,7 @@ def show_popularity_tab(products: pd.DataFrame) -> None:
         r"\dashboard\dashboard_data\blended_products_top100.csv"
     )
  
-    st.subheader("\U0001f4cb Blended Recommendation List")
+    st.subheader("Blended Recommendation List")
     st.caption(
         "Popular + Discovery products pre-computed and ranked. "
         "Use the slider to control how many to show — up to 100."
