@@ -197,29 +197,6 @@ def _split_like_cbf(reviews: pd.DataFrame, user_col: str, cbf) -> tuple[pd.DataF
     return train_df, test_df
 
 
-def _filter_test_to_training_items(
-    train_df: pd.DataFrame,
-    test_df: pd.DataFrame,
-    user_col: str,
-    item_col: str,
-) -> pd.DataFrame:
-    """Remove held-out products that were never present in the training catalog."""
-    train_items = set(train_df[item_col].dropna().astype(str))
-    test_items = test_df[item_col].astype(str)
-    keep_mask = test_items.isin(train_items)
-    filtered = test_df.loc[keep_mask].copy()
-
-    removed_rows = int((~keep_mask).sum())
-    users_before = int(test_df[user_col].nunique())
-    users_after = int(filtered[user_col].nunique())
-    _log(
-        "Training-catalog filter: "
-        f"removed {removed_rows:,} held-out rows and "
-        f"{users_before - users_after:,} users with no remaining test item"
-    )
-    return filtered
-
-
 def _build_ground_truth(test_df: pd.DataFrame, user_col: str, item_col: str) -> dict[str, set[str]]:
     if test_df.empty:
         return {}
@@ -843,10 +820,7 @@ def main() -> int:
         fallback_items=cached_catalog,
     )
     products = _load_products(args.products)
-    filtered_test_df = _filter_test_to_training_items(
-        train_df, test_df, user_col, item_col
-    )
-    ground_truth = _build_ground_truth(filtered_test_df, user_col, item_col)
+    ground_truth = _build_ground_truth(test_df, user_col, item_col)
 
     builder = MODEL_REGISTRY[args.model]
     _log(f"Building recommendations with model={args.model}")
